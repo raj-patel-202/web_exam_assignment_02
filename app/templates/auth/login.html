@@ -10,7 +10,6 @@
   <form class="form-card" method="post" action="/auth/login">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-heading"><h2>Sign in</h2><p>Enter your account credentials.</p></div>
-    {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
     <label>Username<input name="username" value="{{ username or '' }}" autocomplete="username" required autofocus></label>
     <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
     <button class="button button-full" type="submit">Sign in</button>
@@ -18,4 +17,3 @@
   </form>
 </section>
 {% endblock %}
-

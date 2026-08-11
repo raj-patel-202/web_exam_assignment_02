@@ -5,12 +5,6 @@
   <a class="button" href="/instructor/exams/new">Upload new exam</a>
 </section>
 
-<div class="metric-grid">
-  <article><span>Published exams</span><strong>{{ published_exam_count }}</strong></article>
-  <article><span>Total attempts</span><strong>{{ exams|map(attribute='attempts')|map('length')|sum }}</strong></article>
-  <article><span>Examiner accounts</span><strong>{{ examiners|length }}</strong></article>
-</div>
-
 <section class="section-block">
   <div class="section-heading"><h2>Your exams</h2><a href="/instructor/exams/new">Add exam</a></div>
   <div class="card-grid card-grid-wide">

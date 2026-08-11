@@ -97,9 +97,6 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "user": user,
             "exams": exams,
             "examiners": examiners,
-            "published_exam_count": sum(
-                exam.status == ExamStatus.PUBLISHED for exam in exams
-            ),
         },
     )
 

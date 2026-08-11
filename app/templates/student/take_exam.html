@@ -9,7 +9,6 @@
     <h1 id="fullscreen-gate-title">{% if attempt.activated_at %}Return to fullscreen to continue{% else %}Enter fullscreen to start{% endif %}</h1>
     <p id="fullscreen-gate-copy">{% if attempt.activated_at %}Your exam timer is still running. Re-enter fullscreen to unlock the questions.{% else %}Your exam timer starts only after fullscreen mode is active. Leaving fullscreen will lock and blur the exam.{% endif %}</p>
     <button class="button button-full" id="fullscreen-gate-button" type="button">{% if attempt.activated_at %}Re-enter fullscreen{% else %}Enter fullscreen and start exam{% endif %}</button>
-    <p class="form-error fullscreen-gate-error" id="fullscreen-gate-error" role="alert" hidden></p>
   </div>
 </section>
 

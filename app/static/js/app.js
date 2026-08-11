@@ -2,14 +2,74 @@
   "use strict";
 
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+  const messageModal = document.querySelector("#app-message-modal");
+  const messageTitle = document.querySelector("#app-message-title");
+  const messageText = document.querySelector("#app-message-text");
+  const messageIcon = document.querySelector("#app-message-icon");
+  const messageProgress = document.querySelector("#app-message-progress");
+  const messageKinds = {
+    success: { title: "Success", icon: "✓" },
+    error: { title: "Action needed", icon: "!" },
+    warning: { title: "Please note", icon: "!" },
+    info: { title: "Notice", icon: "i" },
+  };
+  let messageTimer = null;
+  let messageHideTimer = null;
+
+  const hideMessage = () => {
+    if (!messageModal || messageModal.hidden) return;
+    window.clearTimeout(messageTimer);
+    window.clearTimeout(messageHideTimer);
+    messageModal.classList.remove("is-visible");
+    document.body.classList.remove("has-message-modal");
+    messageHideTimer = window.setTimeout(() => { messageModal.hidden = true; }, 180);
+  };
+
+  window.showMessage = (message, kind = "info", timeout = 3000) => {
+    if (!messageModal || !message) return;
+    const normalizedKind = messageKinds[kind] ? kind : "info";
+    const presentation = messageKinds[normalizedKind];
+    window.clearTimeout(messageTimer);
+    window.clearTimeout(messageHideTimer);
+    messageModal.hidden = false;
+    messageModal.dataset.kind = normalizedKind;
+    messageTitle.textContent = presentation.title;
+    messageText.textContent = String(message);
+    messageIcon.textContent = presentation.icon;
+    const progressBar = document.createElement("span");
+    progressBar.style.animationDuration = `${timeout}ms`;
+    messageProgress.replaceChildren(progressBar);
+    document.body.classList.add("has-message-modal");
+    window.requestAnimationFrame(() => messageModal.classList.add("is-visible"));
+    messageTimer = window.setTimeout(hideMessage, timeout);
+  };
+
+  messageModal?.querySelectorAll("[data-message-close]").forEach((button) => {
+    button.addEventListener("click", hideMessage);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !messageModal?.hidden) hideMessage();
+  });
+  if (messageModal && !messageModal.hidden && messageText.textContent.trim()) {
+    window.showMessage(messageText.textContent.trim(), messageModal.dataset.kind);
+  }
+
+  let invalidMessageShown = false;
+  document.addEventListener("invalid", (event) => {
+    event.preventDefault();
+    if (invalidMessageShown) return;
+    invalidMessageShown = true;
+    const field = event.target;
+    window.showMessage(field.validationMessage || "Complete the required field.", "error");
+    field.focus({ preventScroll: false });
+    window.setTimeout(() => { invalidMessageShown = false; }, 0);
+  }, true);
 
   document.querySelectorAll(".js-start-exam").forEach((button) => {
     button.addEventListener("click", async () => {
       const examId = button.dataset.examId;
-      const message = document.querySelector(`[data-message-for="${examId}"]`);
       button.disabled = true;
       button.textContent = "Preparing your exam…";
-      if (message) message.textContent = "";
       try {
         const response = await fetch(`/student/exams/${examId}/start`, {
           method: "POST",
@@ -21,7 +81,7 @@
       } catch (error) {
         button.disabled = false;
         button.textContent = "Try again";
-        if (message) message.textContent = error.message;
+        window.showMessage(error.message || "Unable to start exam.", "error");
       }
     });
   });
@@ -38,7 +98,6 @@
   const scheduleField = document.querySelector("#schedule-field");
   const graceField = document.querySelector("#grace-field");
   const startValue = document.querySelector("#start-at-value");
-  const scheduleError = document.querySelector("#schedule-error");
   const scheduleModeCopy = document.querySelector("#schedule-mode-copy");
   const uploadForm = scheduleField?.closest("form");
   const monthSelect = document.querySelector("#start-month");
@@ -104,18 +163,16 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  const validateSchedule = () => {
+  const validateSchedule = (announce = false) => {
     if (!startValue || examType?.value !== "scheduled") return true;
     const selected = pickerDate();
     if (!selected || Number.isNaN(selected.getTime()) || selected <= liveServerNow()) {
       startValue.value = "";
-      scheduleError.textContent = "Choose a date and time in the future.";
-      scheduleError.hidden = false;
       scheduleField.classList.add("has-error");
+      if (announce) window.showMessage("Choose a date and time in the future.", "error");
       return false;
     }
     startValue.value = toLocalIso(selected);
-    scheduleError.hidden = true;
     scheduleField.classList.remove("has-error");
     return true;
   };
@@ -163,14 +220,13 @@
       : "Scheduling is unavailable for practice exams.";
     if (scheduled) validateSchedule();
     else {
-      scheduleError.hidden = true;
       scheduleField.classList.remove("has-error");
     }
   };
   initialiseSchedulePicker();
   examType?.addEventListener("change", syncScheduleFields);
   uploadForm?.addEventListener("submit", (event) => {
-    if (examType?.value === "scheduled" && !validateSchedule()) {
+    if (examType?.value === "scheduled" && !validateSchedule(true)) {
       event.preventDefault();
       scheduleField.scrollIntoView({ behavior: "smooth", block: "center" });
     }

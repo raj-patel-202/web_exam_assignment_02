@@ -38,8 +38,25 @@
   </header>
 
   {% if flash %}
-    <div class="flash flash-{{ flash.category }}" role="status">{{ flash.message }}</div>
+    {% set initial_message = flash.message %}
+    {% set initial_message_kind = flash.category %}
+  {% elif error %}
+    {% set initial_message = error %}
+    {% set initial_message_kind = 'error' %}
   {% endif %}
+
+  <div class="message-modal" id="app-message-modal" data-kind="{{ initial_message_kind or 'info' }}" {% if not initial_message %}hidden{% endif %}>
+    <button class="message-modal-backdrop" type="button" data-message-close aria-label="Close message"></button>
+    <section class="message-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="app-message-title" aria-describedby="app-message-text">
+      <div class="message-modal-icon" id="app-message-icon" aria-hidden="true">i</div>
+      <div class="message-modal-copy">
+        <h2 id="app-message-title">Notice</h2>
+        <p id="app-message-text" aria-live="assertive">{{ initial_message or '' }}</p>
+      </div>
+      <button class="message-modal-close" type="button" data-message-close aria-label="Close message">×</button>
+      <div class="message-modal-progress" id="app-message-progress" aria-hidden="true"><span></span></div>
+    </section>
+  </div>
 
   <main class="page-shell {% block shell_class %}{% endblock %}">
     {% block content %}{% endblock %}
@@ -53,4 +70,3 @@
   {% block scripts %}{% endblock %}
 </body>
 </html>
-

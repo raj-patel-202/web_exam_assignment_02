@@ -4,7 +4,6 @@
 <section class="page-heading"><span class="eyebrow">TXT import</span><h1>Publish a new exam.</h1><p>The familiar question format stays the same; storage and validation are now database-backed.</p></section>
 <form class="form-card form-card-wide" action="/instructor/exams/new" method="post" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
   <div class="form-grid">
     <label class="span-two">Exam name<input name="name" value="{{ form.name if form else '' }}" maxlength="160" required></label>
     <label>Exam type<select name="exam_type" id="exam-type"><option value="practice" {% if not form or form.exam_type == 'practice' %}selected{% endif %}>Practice test</option><option value="scheduled" {% if form and form.exam_type == 'scheduled' %}selected{% endif %}>Scheduled test</option></select></label>
@@ -36,7 +35,6 @@
         <label>Period<select id="start-period" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}><option value="AM">AM</option><option value="PM">PM</option></select></label>
       </div>
       <label class="grace-control" id="grace-field">Joining grace (minutes)<input type="number" name="join_grace_minutes" min="0" max="120" value="{{ form.join_grace_minutes if form else 5 }}" {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}><small>How long students may join after the scheduled start</small></label>
-      <p class="schedule-error" id="schedule-error" role="alert" hidden></p>
     </section>
     <label class="span-two file-field">Question paper (.txt)<input type="file" name="exam_file" accept=".txt,text/plain" required><small>Maximum 2 MB · UTF-8 text</small></label>
   </div>

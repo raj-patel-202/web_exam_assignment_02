@@ -29,6 +29,7 @@ def test_public_page_and_student_registration(monkeypatch):
         home = client.get("/")
         assert home.status_code == 200
         assert "Exams that stay focused" in home.text
+        assert 'id="app-message-modal"' in home.text
 
         register_page = client.get("/auth/register")
         csrf = re.search(r'name="csrf-token" content="([^"]+)"', register_page.text).group(1)
@@ -109,11 +110,15 @@ def test_instructor_can_upload_txt_exam(monkeypatch):
         detail = client.get(uploaded.headers["location"])
         assert detail.status_code == 200
         assert "Web Upload" in detail.text
+        assert "was parsed and published" in detail.text
         analysis = client.get(f"{uploaded.headers['location']}/analysis")
         assert analysis.status_code == 200
         dashboard_after_upload = client.get("/instructor")
         assert dashboard_after_upload.status_code == 200
         assert "Web Upload" in dashboard_after_upload.text
+        assert "Published exams" not in dashboard_after_upload.text
+        assert "Total attempts" not in dashboard_after_upload.text
+        assert "Examiner accounts" not in dashboard_after_upload.text
 
         created_examiner = client.post(
             "/instructor/examiners/new",

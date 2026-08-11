@@ -21,7 +21,6 @@
     {% else %}
       <button class="button button-disabled button-full" disabled>{{ card.availability.label }}</button>
     {% endif %}
-    <p class="card-message" data-message-for="{{ exam.id }}" aria-live="polite"></p>
   </article>
 {% else %}
   <div class="empty-panel full-span"><h2>No exams are published</h2><p>Please check again after your instructor uploads an exam.</p></div>

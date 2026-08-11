@@ -17,7 +17,6 @@
   const fullscreenGateButton = document.querySelector("#fullscreen-gate-button");
   const fullscreenGateTitle = document.querySelector("#fullscreen-gate-title");
   const fullscreenGateCopy = document.querySelector("#fullscreen-gate-copy");
-  const fullscreenGateError = document.querySelector("#fullscreen-gate-error");
   const workspace = document.querySelector("#exam-workspace");
   const notice = document.querySelector("#exam-notice");
 
@@ -46,8 +45,11 @@
   };
 
   const setNotice = (message, kind = "info") => {
-    notice.textContent = message;
-    notice.dataset.kind = kind;
+    if (window.showMessage) window.showMessage(message, kind);
+    else {
+      notice.textContent = message;
+      notice.dataset.kind = kind;
+    }
   };
 
   const lockExam = (isExit = false) => {
@@ -70,7 +72,6 @@
     workspace.classList.remove("is-locked");
     workspace.setAttribute("aria-hidden", "false");
     fullscreenGate.hidden = true;
-    fullscreenGateError.hidden = true;
   };
 
   async function activateExam() {
@@ -90,7 +91,6 @@
 
   async function enterFullscreenAndContinue() {
     fullscreenGateButton.disabled = true;
-    fullscreenGateError.hidden = true;
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
       if (!document.fullscreenElement) throw new Error("Fullscreen mode is required to continue.");
@@ -98,8 +98,7 @@
       unlockExam();
     } catch (error) {
       lockExam();
-      fullscreenGateError.textContent = error.message || "Fullscreen mode could not be enabled. Allow fullscreen access and try again.";
-      fullscreenGateError.hidden = false;
+      setNotice(error.message || "Fullscreen mode could not be enabled. Allow fullscreen access and try again.", "error");
       if (document.fullscreenElement && !examStarted) {
         try {
           await document.exitFullscreen();
