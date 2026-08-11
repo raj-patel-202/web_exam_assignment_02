@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading split-heading">
+  <div><span class="eyebrow">Student workspace</span><h1>Good to see you, {{ user.full_name.split()[0] }}.</h1><p>Your active work and recent results are kept together.</p></div>
+  <a class="button" href="/student/exams">Browse exams</a>
+</section>
+
+{% if active_attempts %}
+<section class="section-block">
+  <div class="section-heading"><h2>Continue where you left off</h2><span>{{ active_attempts|length }} active</span></div>
+  <div class="card-grid">
+    {% for attempt in active_attempts %}
+      <article class="exam-card active-card">
+        <div class="card-kicker"><span class="live-dot"></span> In progress</div>
+        <h3>{{ attempt.exam.name }}</h3>
+        <p>Attempt {{ attempt.attempt_number }} · {% if attempt.activated_at %}ends {{ attempt.expires_at|local_datetime('%I:%M %p') }}{% else %}waiting for fullscreen start{% endif %}</p>
+        <a class="button button-full" href="/student/attempts/{{ attempt.id }}">Resume exam</a>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="section-block">
+  <div class="section-heading"><h2>Recent attempts</h2><a href="/student/exams">View all exams</a></div>
+  {% if recent_attempts %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Exam</th><th>Submitted</th><th>Score</th><th>Time</th><th></th></tr></thead>
+      <tbody>
+      {% for attempt in recent_attempts %}
+        <tr><td><strong>{{ attempt.exam.name }}</strong><small>Attempt {{ attempt.attempt_number }}</small></td><td>{{ attempt.submitted_at|local_datetime }}</td><td>{{ attempt.score|mark }} / {{ attempt.max_score|mark }}</td><td>{{ attempt.total_time_seconds|human_seconds }}</td><td><a href="/student/attempts/{{ attempt.id }}/result">Review</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty-panel"><h3>No completed attempts yet</h3><p>Your results will appear here after your first submission.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

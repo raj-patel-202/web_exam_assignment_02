@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading split-heading"><div><span class="eyebrow">Student attempt</span><h1>{{ attempt.student.full_name }}</h1><p>{{ exam.name }} · submitted {{ attempt.submitted_at|local_datetime }}</p></div><a class="button button-secondary" href="/instructor/exams/{{ exam.id }}/analysis">Back to analysis</a></section>
+<div class="metric-grid"><article><span>Score</span><strong>{{ attempt.score|mark }} / {{ attempt.max_score|mark }}</strong></article><article><span>Attempted</span><strong>{{ attempt.attempted_count }}</strong></article><article><span>Wrong</span><strong>{{ attempt.wrong_count }}</strong></article><article><span>Total time</span><strong>{{ attempt.total_time_seconds|human_seconds }}</strong></article></div>
+<section class="section-block"><div class="section-heading"><h2>Response detail</h2><span>{{ attempt.suspicious_event_count }} monitoring flags</span></div><div class="review-list">
+{% for row in review.rows %}<article class="review-row {% if row.is_correct %}review-correct{% else %}review-wrong{% endif %}"><div class="review-number">{{ row.position }}</div><div><h3>{{ row.text }}</h3><p><span>Selected</span>{{ row.selected_label }} · {{ row.selected }}</p><p><span>Correct</span>{{ row.correct_label }} · {{ row.correct }}</p></div><div class="review-score">{{ row.marks|signed_mark }}<small>{{ row.time|human_seconds }}</small></div></article>{% endfor %}
+</div></section>
+{% endblock %}

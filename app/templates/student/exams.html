@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading"><span class="eyebrow">Exam catalogue</span><h1>Choose your next assessment.</h1><p>Scheduled tests enforce their start and joining window on the server.</p></section>
+<div class="card-grid card-grid-wide">
+{% for card in exam_cards %}
+  {% set exam = card.exam %}
+  <article class="exam-card">
+    <div class="card-kicker"><span class="type-badge type-{{ exam.exam_type.value }}">{{ exam.exam_type.value }}</span><span>{{ exam.total_questions }} questions</span></div>
+    <h2>{{ exam.name }}</h2>
+    <p>By {{ exam.creator.full_name }}</p>
+    <dl class="detail-grid compact-details">
+      <div><dt>Duration</dt><dd>{{ exam.duration_minutes }} minutes</dd></div>
+      <div><dt>Scoring</dt><dd>{{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</dd></div>
+      <div><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div>
+      <div><dt>Attempts</dt><dd>{% if exam.exam_type.value == 'practice' %}Unlimited{% else %}One{% endif %}</dd></div>
+    </dl>
+    {% if card.availability.state == 'resume' %}
+      <a class="button button-full" href="/student/attempts/{{ card.availability.attempt_id }}">{{ card.availability.label }}</a>
+    {% elif card.availability.state == 'available' %}
+      <button class="button button-full js-start-exam" data-exam-id="{{ exam.id }}">{{ card.availability.label }}</button>
+    {% else %}
+      <button class="button button-disabled button-full" disabled>{{ card.availability.label }}</button>
+    {% endif %}
+    <p class="card-message" data-message-for="{{ exam.id }}" aria-live="polite"></p>
+  </article>
+{% else %}
+  <div class="empty-panel full-span"><h2>No exams are published</h2><p>Please check again after your instructor uploads an exam.</p></div>
+{% endfor %}
+</div>
+{% endblock %}

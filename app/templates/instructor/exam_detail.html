@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading split-heading">
+  <div><span class="eyebrow">{{ exam.exam_type.value }} exam</span><h1>{{ exam.name }}</h1><p>Uploaded from {{ exam.source_filename }} · {{ exam.created_at|local_datetime }}</p></div>
+  <div class="page-heading-actions">
+    <a class="button" href="/instructor/exams/{{ exam.id }}/analysis">Open analysis</a>
+    {% if exam.status.value != 'archived' %}
+    <form action="/instructor/exams/{{ exam.id }}/end" method="post" class="js-confirm-form" data-confirm="End {{ exam.name }}? New candidates will be blocked, while candidates already taking it may finish.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button button-danger" type="submit">End exam</button>
+    </form>
+    {% else %}
+    <span class="status-pill neutral">Exam ended</span>
+    {% endif %}
+  </div>
+</section>
+{% if exam.status.value == 'archived' %}<div class="evidence-note"><strong>Closed to new candidates.</strong> Attempts that were already in progress can continue until their individual timers expire or they submit.</div>{% endif %}
+<div class="metric-grid">
+  <article><span>Questions</span><strong>{{ exam.total_questions }}</strong></article>
+  <article><span>Duration</span><strong>{{ exam.duration_minutes }} min</strong></article>
+  <article><span>Starts</span><strong class="small-value">{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</strong></article>
+  <article><span>Scoring</span><strong>{{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</strong></article>
+</div>
+
+<section class="section-block split-panel">
+  <div><span class="eyebrow">Live supervision</span><h2>Assigned invigilators</h2>
+    {% if exam.examiner_assignments %}<div class="assignment-list">{% for assignment in exam.examiner_assignments %}<div class="assignment-row"><span class="user-chip"><span>{{ assignment.examiner.full_name[:1] }}</span>{{ assignment.examiner.full_name }}</span><form action="/instructor/exams/{{ exam.id }}/unassign-examiner/{{ assignment.examiner.id }}" method="post" class="js-confirm-form" data-confirm="Remove {{ assignment.examiner.full_name }} from this exam? Their open monitoring room will close immediately."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-ghost button-small" type="submit">Remove</button></form></div>{% endfor %}</div>{% else %}<p>No invigilator is assigned yet.</p>{% endif %}
+  </div>
+  <form class="inline-card-form compact-form" action="/instructor/exams/{{ exam.id }}/assign-examiner" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Choose invigilator<select name="examiner_id" required><option value="" disabled selected>Select an account</option>{% for examiner in available_examiners %}<option value="{{ examiner.id }}">{{ examiner.full_name }} · {{ examiner.username }}</option>{% endfor %}</select></label>
+    <button class="button" type="submit" {% if not available_examiners %}disabled{% endif %}>Assign invigilator</button>
+    {% if not available_examiners %}<small>Every available invigilator is already assigned, or no account exists.</small>{% endif %}
+  </form>
+</section>
+
+<section class="section-block">
+  <div class="section-heading"><h2>Question paper</h2><span>Correct answers are visible only to instructors</span></div>
+  <div class="question-preview-list">
+  {% for question in exam.questions %}
+    <article><div class="review-number">{{ question.position }}</div><div><h3>{{ question.text }}</h3><ol class="option-preview" type="A">{% for option in question.options %}<li class="{% if option.is_correct %}correct-option{% endif %}">{{ option.text }}{% if option.is_correct %}<span>Correct</span>{% endif %}</li>{% endfor %}</ol></div></article>
+  {% endfor %}
+  </div>
+</section>
+{% endblock %}

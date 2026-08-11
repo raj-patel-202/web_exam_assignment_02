@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block body_class %}exam-mode{% endblock %}
+{% block shell_class %}exam-shell{% endblock %}
+{% block content %}
+<section class="fullscreen-gate" id="fullscreen-gate" role="dialog" aria-modal="true" aria-labelledby="fullscreen-gate-title">
+  <div class="fullscreen-gate-card">
+    <span class="fullscreen-gate-icon" aria-hidden="true">⛶</span>
+    <span class="eyebrow">Secure exam mode</span>
+    <h1 id="fullscreen-gate-title">{% if attempt.activated_at %}Return to fullscreen to continue{% else %}Enter fullscreen to start{% endif %}</h1>
+    <p id="fullscreen-gate-copy">{% if attempt.activated_at %}Your exam timer is still running. Re-enter fullscreen to unlock the questions.{% else %}Your exam timer starts only after fullscreen mode is active. Leaving fullscreen will lock and blur the exam.{% endif %}</p>
+    <button class="button button-full" id="fullscreen-gate-button" type="button">{% if attempt.activated_at %}Re-enter fullscreen{% else %}Enter fullscreen and start exam{% endif %}</button>
+    <p class="form-error fullscreen-gate-error" id="fullscreen-gate-error" role="alert" hidden></p>
+  </div>
+</section>
+
+<div class="exam-workspace is-locked" id="exam-workspace" aria-hidden="true">
+  <section class="exam-topbar">
+    <div><span class="eyebrow">Attempt {{ attempt.attempt_number }}</span><h1>{{ attempt.exam.name }}</h1></div>
+    <div class="exam-top-actions">
+      <div class="timer" id="exam-timer" aria-live="polite"><small>Time remaining</small><strong>--:--</strong></div>
+    </div>
+  </section>
+  <div class="exam-notice" id="exam-notice" role="status">Answers save automatically. Browser focus changes are recorded for examiner review.</div>
+
+  <div class="exam-layout">
+    <section class="question-stage" aria-live="polite">
+      <div class="question-meta"><span id="question-counter">Question 1 of {{ questions|length }}</span><span id="save-status">All changes saved</span></div>
+      <article id="question-card" class="question-card"></article>
+      <div class="question-actions">
+        <button class="button button-secondary" id="previous-question" type="button">Previous</button>
+        <button class="button" id="next-question" type="button">Next question</button>
+      </div>
+    </section>
+    <aside class="question-sidebar">
+      <div class="sidebar-heading"><h2>Question map</h2><span><i class="legend-dot answered"></i> Answered</span></div>
+      <div class="question-palette" id="question-palette"></div>
+      <div class="palette-summary"><strong id="answered-count">0</strong><span>answered</span><strong id="unanswered-count">{{ questions|length }}</strong><span>remaining</span></div>
+      <button class="button button-danger button-full" id="submit-exam" type="button">Submit exam</button>
+    </aside>
+  </div>
+</div>
+<script id="questions-data" type="application/json">{{ questions|tojson }}</script>
+<script id="exam-config" type="application/json">{{ exam_config|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='js/exam.js') }}" defer></script>{% endblock %}

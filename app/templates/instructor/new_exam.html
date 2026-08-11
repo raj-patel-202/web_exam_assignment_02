@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block shell_class %}medium-shell{% endblock %}
+{% block content %}
+<section class="page-heading"><span class="eyebrow">TXT import</span><h1>Publish a new exam.</h1><p>The familiar question format stays the same; storage and validation are now database-backed.</p></section>
+<form class="form-card form-card-wide" action="/instructor/exams/new" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
+  <div class="form-grid">
+    <label class="span-two">Exam name<input name="name" value="{{ form.name if form else '' }}" maxlength="160" required></label>
+    <label>Exam type<select name="exam_type" id="exam-type"><option value="practice" {% if not form or form.exam_type == 'practice' %}selected{% endif %}>Practice test</option><option value="scheduled" {% if form and form.exam_type == 'scheduled' %}selected{% endif %}>Scheduled test</option></select></label>
+    <label>Duration (minutes)<input type="number" name="duration_minutes" min="1" max="720" value="{{ form.duration_minutes if form else 30 }}" required></label>
+    <section class="span-two marking-panel" aria-labelledby="marking-title">
+      <div><span class="eyebrow">Per question</span><h2 id="marking-title">Marking scheme</h2><p>Use any value up to two decimal places. Set the negative mark to 0 when there is no penalty.</p></div>
+      <div class="marking-fields">
+        <label>Correct answer<input type="number" name="positive_marks" min="0.01" max="1000" step="0.01" value="{{ form.positive_marks if form else '4.00' }}" required><small>Positive marks, for example 4 or 1.5</small></label>
+        <label>Wrong answer<input type="number" name="negative_marks" min="-1000" max="0" step="0.01" value="{{ form.negative_marks if form else '-1.00' }}" required><small>Use 0, -1, -1.5, or another penalty</small></label>
+      </div>
+    </section>
+    <section class="span-two schedule-panel {% if not form or form.exam_type != 'scheduled' %}is-disabled{% endif %}" id="schedule-field" data-server-now="{{ current_local_iso }}" data-timezone="{{ app_timezone }}" aria-labelledby="schedule-title" aria-disabled="{% if form and form.exam_type == 'scheduled' %}false{% else %}true{% endif %}">
+      <div class="schedule-heading">
+        <div><span class="eyebrow">Exam window</span><h2 id="schedule-title">Choose the start time</h2><p id="schedule-mode-copy">Scheduling is unavailable for practice exams.</p></div>
+        <span class="timezone-chip">{{ app_timezone }}</span>
+      </div>
+      <input type="hidden" name="start_at" id="start-at-value" value="{{ form.start_at if form else '' }}" {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}>
+      <div class="schedule-shortcuts" aria-label="Quick start time choices">
+        <button type="button" data-schedule-control data-schedule-offset="30" {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}>In 30 minutes</button>
+        <button type="button" data-schedule-control data-schedule-offset="60" {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}>In 1 hour</button>
+        <button type="button" data-schedule-control data-schedule-offset="tomorrow" {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}>Tomorrow at 9 AM</button>
+      </div>
+      <div class="schedule-selectors">
+        <label>Month<select id="start-month" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}></select></label>
+        <label>Day<select id="start-day" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}></select></label>
+        <label>Year<select id="start-year" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}></select></label>
+        <label>Hour<select id="start-hour" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}></select></label>
+        <label>Minute<select id="start-minute" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}></select></label>
+        <label>Period<select id="start-period" data-schedule-control {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}><option value="AM">AM</option><option value="PM">PM</option></select></label>
+      </div>
+      <label class="grace-control" id="grace-field">Joining grace (minutes)<input type="number" name="join_grace_minutes" min="0" max="120" value="{{ form.join_grace_minutes if form else 5 }}" {% if not form or form.exam_type != 'scheduled' %}disabled{% endif %}><small>How long students may join after the scheduled start</small></label>
+      <p class="schedule-error" id="schedule-error" role="alert" hidden></p>
+    </section>
+    <label class="span-two file-field">Question paper (.txt)<input type="file" name="exam_file" accept=".txt,text/plain" required><small>Maximum 2 MB · UTF-8 text</small></label>
+  </div>
+  <div class="format-example"><strong>Accepted block format</strong><pre>Q: Who was the first President of India?
+A) Dr. Rajendra Prasad
+B) Dr. S. Radhakrishnan
+C) Jawaharlal Nehru
+D) Mahatma Gandhi
+A: A</pre></div>
+  <div class="form-actions"><a class="button button-ghost" href="/instructor">Cancel</a><button class="button" type="submit">Validate and publish</button></div>
+</form>
+{% endblock %}

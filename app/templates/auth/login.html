@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block shell_class %}narrow-shell{% endblock %}
+{% block content %}
+<section class="auth-layout">
+  <div class="auth-intro">
+    <span class="eyebrow">Welcome back</span>
+    <h1>Continue your exam workflow.</h1>
+    <p>Students, instructors, and assigned examiners use the same secure entrance.</p>
+  </div>
+  <form class="form-card" method="post" action="/auth/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-heading"><h2>Sign in</h2><p>Enter your account credentials.</p></div>
+    {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
+    <label>Username<input name="username" value="{{ username or '' }}" autocomplete="username" required autofocus></label>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="button button-full" type="submit">Sign in</button>
+    <p class="form-footnote">New here? <a href="/auth/register">Create an account</a>.</p>
+  </form>
+</section>
+{% endblock %}
+

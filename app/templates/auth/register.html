@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block shell_class %}narrow-shell{% endblock %}
+{% block content %}
+<section class="auth-layout">
+  <div class="auth-intro">
+    <span class="eyebrow">Get started</span>
+    <h1>Create your workspace identity.</h1>
+    <p>Student accounts can take exams. Instructor accounts can create assessments and provision examiners.</p>
+  </div>
+  <form class="form-card" method="post" action="/auth/register">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-heading"><h2>Create account</h2><p>Use a unique username and a strong password.</p></div>
+    {% if error %}<div class="form-error" role="alert">{{ error }}</div>{% endif %}
+    <label>Full name<input name="full_name" value="{{ full_name or '' }}" autocomplete="name" required></label>
+    <label>Username<input name="username" value="{{ username or '' }}" autocomplete="username" required></label>
+    <label>Password<input type="password" name="password" autocomplete="new-password" minlength="8" required><small>At least 8 characters.</small></label>
+    <label>Account type
+      <select name="role">
+        <option value="student" {% if selected_role != 'instructor' %}selected{% endif %}>Student</option>
+        {% if allow_instructor_registration %}<option value="instructor" {% if selected_role == 'instructor' %}selected{% endif %}>Instructor</option>{% endif %}
+      </select>
+    </label>
+    <button class="button button-full" type="submit">Create account</button>
+    <p class="form-footnote">Already registered? <a href="/auth/login">Sign in</a>.</p>
+  </form>
+</section>
+{% endblock %}
+

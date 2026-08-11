@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: exam_system
+      POSTGRES_USER: exam_user
+      POSTGRES_PASSWORD: exam_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - exam_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exam_user -d exam_system"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://exam_user:exam_password@db:5432/exam_system
+      SECRET_KEY: ${SECRET_KEY:-change-this-compose-secret-before-production}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Kolkata}
+      SESSION_HTTPS_ONLY: ${SESSION_HTTPS_ONLY:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  exam_postgres_data:
+

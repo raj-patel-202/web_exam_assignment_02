@@ -1,0 +1,2 @@
+"""Exam Sentinel web application."""
+

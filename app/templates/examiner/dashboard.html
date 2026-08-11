@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading"><span class="eyebrow">Examiner workspace</span><h1>Live rooms assigned to you.</h1><p>Browser signals are evidence for review, not automatic proof of misconduct.</p></section>
+<div class="card-grid card-grid-wide">
+{% for exam in exams %}<article class="exam-card"><div class="card-kicker"><span class="type-badge type-{{ exam.exam_type.value }}">{{ exam.exam_type.value }}</span><span>{{ exam.attempts|length }} sessions</span></div><h2>{{ exam.name }}</h2><p>Instructor · {{ exam.creator.full_name }}</p><dl class="detail-grid compact-details"><div><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div><div><dt>Duration</dt><dd>{{ exam.duration_minutes }} minutes</dd></div></dl><a class="button button-full" href="/examiner/exams/{{ exam.id }}/monitor">Open monitoring room</a></article>
+{% else %}<div class="empty-panel full-span"><h2>No assigned exams</h2><p>An instructor must assign your examiner account to an exam.</p></div>{% endfor %}
+</div>
+{% endblock %}
+
