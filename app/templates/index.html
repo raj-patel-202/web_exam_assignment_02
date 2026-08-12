@@ -2,46 +2,37 @@
 {% block content %}
 <section class="hero">
   <div class="hero-copy">
-    <span class="eyebrow">Secure, structured, observable</span>
-    <h1>Exams that stay focused from upload to insight.</h1>
-    <p>Run practice and scheduled assessments, monitor live sessions, and turn every response into useful performance data—all from one browser-based system.</p>
+    <h1>Run exams without juggling tools.</h1>
+    <p>Create question papers, supervise live sessions, and review results from one clear workspace.</p>
     <div class="hero-actions">
       <a class="button button-large" href="/auth/register">Create an account</a>
       <a class="button button-secondary button-large" href="/auth/login">Sign in</a>
     </div>
-    <div class="trust-row">
-      <span>Configurable scoring</span>
-      <span>Server-side timer</span>
-      <span>Live examiner signals</span>
+    <div class="trust-row" aria-label="Key features">
+      <span>Flexible marking</span><span>Reliable timers</span><span>Live monitoring</span>
     </div>
   </div>
-  <div class="hero-board" aria-label="Example live exam overview">
-    <div class="board-topline"><span class="live-dot"></span> Civics Final · Live</div>
+  <div class="hero-board" aria-label="Sample live exam activity">
+    <div class="board-topline"><span class="live-dot"></span> Civics Final is live</div>
     <div class="board-stat-grid">
       <div><strong>42</strong><span>Students</span></div>
-      <div><strong>38</strong><span>Connected</span></div>
-      <div><strong>07</strong><span>Flags</span></div>
+      <div><strong>38</strong><span>Online</span></div>
+      <div><strong>7</strong><span>Flags</span></div>
     </div>
     <div class="signal-list">
-      <div><span class="avatar avatar-teal">AS</span><p><strong>Anika S.</strong><small>Question 18 of 25</small></p><span class="status-pill success">Focused</span></div>
-      <div><span class="avatar avatar-amber">RK</span><p><strong>Rohan K.</strong><small>Tab hidden 12 seconds ago</small></p><span class="status-pill warning">Review</span></div>
-      <div><span class="avatar avatar-blue">MM</span><p><strong>Meera M.</strong><small>Question 16 of 25</small></p><span class="status-pill success">Focused</span></div>
+      <div><span class="avatar">A</span><p><strong>Anika Shah</strong><small>Question 18 of 25</small></p><span class="status-pill success">Online</span></div>
+      <div><span class="avatar">R</span><p><strong>Rohan Kumar</strong><small>Left fullscreen 12s ago</small></p><span class="status-pill warning">Check</span></div>
+      <div><span class="avatar">M</span><p><strong>Meera Mehta</strong><small>Question 16 of 25</small></p><span class="status-pill success">Online</span></div>
     </div>
   </div>
 </section>
 
-<section class="feature-strip">
-  <article><span>01</span><h2>Upload once</h2><p>Keep the familiar TXT question format. The parser validates and stores every question in PostgreSQL.</p></article>
-  <article><span>02</span><h2>Run reliably</h2><p>Randomized papers, automatic saves, resumable sessions, strict scheduling, and server-controlled submission.</p></article>
-  <article><span>03</span><h2>Review clearly</h2><p>Question-level timing, difficulty, answer distribution, attempt history, ranking, and live incident evidence.</p></article>
-</section>
-
-<section class="role-section">
-  <div><span class="eyebrow">Three coordinated roles</span><h2>One exam lifecycle. No disconnected tools.</h2></div>
-  <div class="role-grid">
-    <article class="role-card"><span class="role-icon">ST</span><h3>Students</h3><p>Take timed exams, move confidently between questions, recover after a disconnect, and review performance.</p></article>
-    <article class="role-card"><span class="role-icon">IN</span><h3>Instructors</h3><p>Upload, schedule, assign examiners, and inspect performance down to each answer and second spent.</p></article>
-    <article class="role-card"><span class="role-icon">EX</span><h3>Examiners</h3><p>Follow live progress and browser-focus signals through a clear, evidence-based monitoring room.</p></article>
+<section class="feature-section">
+  <h2>Everything needed for a complete exam.</h2>
+  <div class="feature-strip">
+    <article><span class="feature-icon">1</span><h3>Create</h3><p>Upload the TXT format you already use, choose the schedule, and set the marking scheme.</p></article>
+    <article><span class="feature-icon">2</span><h3>Supervise</h3><p>See who is online, how far they have progressed, and which browser events need attention.</p></article>
+    <article><span class="feature-icon">3</span><h3>Review</h3><p>Compare scores, completion time, question difficulty, and individual answers.</p></article>
   </div>
 </section>
 {% endblock %}

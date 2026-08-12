@@ -1,24 +1,25 @@
 {% extends "base.html" %}
+{% import "templates.html" as ui %}
 {% block content %}
-<section class="page-heading split-heading"><div><span class="eyebrow">Performance intelligence</span><h1>{{ exam.name }}</h1><p>Every submitted attempt contributes to these metrics.</p></div><a class="button button-secondary" href="/instructor/exams/{{ exam.id }}">Manage exam</a></section>
+{{ ui.page_header(exam.name ~ " results", "Scores and question performance from submitted attempts.", back_href="/instructor/exams/" ~ exam.id, back_label="Manage exam") }}
 <div class="metric-grid">
-  <article><span>Total attempts</span><strong>{{ analysis.total_attempts }}</strong></article>
-  <article><span>Average score</span><strong>{{ analysis.average_score|mark }} / {{ analysis.max_score|mark }}</strong></article>
-  <article><span>Median score</span><strong>{{ analysis.median_score|mark }}</strong></article>
-  <article><span>Average time</span><strong>{{ analysis.average_time|round|int|human_seconds }}</strong></article>
+  {{ ui.metric("Attempts", analysis.total_attempts) }}
+  {{ ui.metric("Average score", (analysis.average_score|mark) ~ " / " ~ (analysis.max_score|mark)) }}
+  {{ ui.metric("Median score", analysis.median_score|mark) }}
+  {{ ui.metric("Average time", analysis.average_time|round|int|human_seconds) }}
 </div>
 
 <section class="section-block">
-  <div class="section-heading"><h2>Question performance</h2><span>Correctness includes skipped responses in the denominator</span></div>
-  {% if analysis.questions %}<div class="table-wrap"><table><thead><tr><th>Question</th><th>Attempted</th><th>Correct</th><th>Wrong</th><th>Skipped</th><th>Correct %</th><th>Avg time</th><th>Difficulty</th></tr></thead><tbody>
-    {% for row in analysis.questions %}<tr><td>Q{{ row.position }}</td><td>{{ row.attempted }}</td><td>{{ row.correct }}</td><td>{{ row.wrong }}</td><td>{{ row.skipped }}</td><td><div class="bar-cell"><span style="width: {{ row.percent_correct }}%"></span><strong>{{ '%.1f'|format(row.percent_correct) }}%</strong></div></td><td>{{ row.average_time|round|int|human_seconds }}</td><td><span class="status-pill difficulty-{{ row.difficulty|lower }}">{{ row.difficulty }}</span></td></tr>{% endfor %}
-  </tbody></table></div>{% else %}<div class="empty-panel"><h3>No question data yet</h3><p>Metrics appear after the first submitted attempt.</p></div>{% endif %}
+  {{ ui.section_header("Question performance", "Skipped answers are included in the percentage") }}
+  {% if analysis.questions %}<div class="table-wrap"><table><thead><tr><th>Question</th><th>Attempted</th><th>Correct</th><th>Wrong</th><th>Skipped</th><th>Correct</th><th>Avg time</th><th>Difficulty</th></tr></thead><tbody>
+  {% for row in analysis.questions %}<tr><td>Q{{ row.position }}</td><td>{{ row.attempted }}</td><td>{{ row.correct }}</td><td>{{ row.wrong }}</td><td>{{ row.skipped }}</td><td><div class="bar-cell"><span style="width: {{ row.percent_correct }}%"></span><strong>{{ '%.1f'|format(row.percent_correct) }}%</strong></div></td><td>{{ row.average_time|round|int|human_seconds }}</td><td><span class="status-pill difficulty-{{ row.difficulty|lower }}">{{ row.difficulty }}</span></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}{{ ui.empty_state("No question data yet", "Results appear after the first submitted attempt.") }}{% endif %}
 </section>
 
 <section class="section-block">
-  <div class="section-heading"><h2>Leaderboard</h2><span>Ranked by score, then time</span></div>
-  {% if analysis.leaderboard %}<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Marks</th><th>Time</th><th>Attempted</th><th>Wrong</th><th></th></tr></thead><tbody>
-    {% for row in analysis.leaderboard %}<tr><td>#{{ row.rank }}</td><td><strong>{{ row.student.full_name }}</strong><small>{{ row.student.username }}</small></td><td>{{ row.score|mark }} / {{ row.max_score|mark }}</td><td>{{ '%.1f'|format(row.percent) }}%</td><td>{{ row.time|human_seconds }}</td><td>{{ row.attempted }}</td><td>{{ row.wrong }}</td><td><a href="/instructor/exams/{{ exam.id }}/attempts/{{ row.attempt_id }}">Details</a></td></tr>{% endfor %}
-  </tbody></table></div>{% else %}<div class="empty-panel"><h3>No submissions yet</h3><p>The leaderboard will populate automatically.</p></div>{% endif %}
+  {{ ui.section_header("Leaderboard", "Ordered by score, then completion time") }}
+  {% if analysis.leaderboard %}<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Percent</th><th>Time</th><th>Attempted</th><th>Wrong</th><th></th></tr></thead><tbody>
+  {% for row in analysis.leaderboard %}<tr><td>#{{ row.rank }}</td><td><strong>{{ row.student.full_name }}</strong><small>{{ row.student.username }}</small></td><td>{{ row.score|mark }} / {{ row.max_score|mark }}</td><td>{{ '%.1f'|format(row.percent) }}%</td><td>{{ row.time|human_seconds }}</td><td>{{ row.attempted }}</td><td>{{ row.wrong }}</td><td><a href="/instructor/exams/{{ exam.id }}/attempts/{{ row.attempt_id }}">Open</a></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}{{ ui.empty_state("No submissions yet", "Submitted attempts will appear here.") }}{% endif %}
 </section>
 {% endblock %}

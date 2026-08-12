@@ -28,7 +28,7 @@ def test_public_page_and_student_registration(monkeypatch):
     with TestClient(app.main.app) as client:
         home = client.get("/")
         assert home.status_code == 200
-        assert "Exams that stay focused" in home.text
+        assert "Run exams without juggling tools" in home.text
         assert 'id="app-message-modal"' in home.text
 
         register_page = client.get("/auth/register")
@@ -48,7 +48,7 @@ def test_public_page_and_student_registration(monkeypatch):
         assert response.headers["location"] == "/student"
         dashboard = client.get("/student")
         assert dashboard.status_code == 200
-        assert "Good to see you" in dashboard.text
+        assert "Hello, Web" in dashboard.text
         catalogue = client.get("/student/exams")
         assert catalogue.status_code == 200
 
@@ -89,7 +89,7 @@ def test_instructor_can_upload_txt_exam(monkeypatch):
         upload_page = client.get("/instructor/exams/new")
         assert upload_page.status_code == 200
         assert 'id="start-month"' in upload_page.text
-        assert "Marking scheme" in upload_page.text
+        assert "Marks per question" in upload_page.text
         csrf = re.search(r'name="csrf-token" content="([^"]+)"', upload_page.text).group(1)
         uploaded = client.post(
             "/instructor/exams/new",
@@ -168,7 +168,7 @@ def test_instructor_can_upload_txt_exam(monkeypatch):
         ).group(1)
         monitor = client.get(f"/examiner/exams/{exam_id}/monitor")
         assert monitor.status_code == 200
-        assert "Incident timeline" in monitor.text
+        assert "Recent events" in monitor.text
 
         examiner_logout = client.post(
             "/auth/logout", data={"csrf_token": examiner_csrf}, follow_redirects=False

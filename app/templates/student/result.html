@@ -1,28 +1,26 @@
 {% extends "base.html" %}
+{% import "templates.html" as ui %}
 {% block content %}
 <section class="result-hero {% if reveal_answers %}result-ready{% else %}result-pending{% endif %}">
-  <div><span class="eyebrow">Attempt {{ attempt.attempt_number }} complete</span><h1>{{ attempt.exam.name }}</h1><p>Submitted {{ attempt.submitted_at|local_datetime }} · {{ attempt.total_time_seconds|human_seconds }}</p></div>
-  {% if reveal_answers %}
-  <div class="score-orb"><strong>{{ attempt.score|mark }}</strong><span>out of {{ attempt.max_score|mark }}</span></div>
-  {% else %}
-  <div class="pending-lock"><strong>Submitted</strong><span>Answers unlock after the scheduled exam ends.</span></div>
-  {% endif %}
+  <div><span class="result-label">Attempt {{ attempt.attempt_number }} completed</span><h1>{{ attempt.exam.name }}</h1><p>Submitted {{ attempt.submitted_at|local_datetime }} · {{ attempt.total_time_seconds|human_seconds }}</p></div>
+  {% if reveal_answers %}<div class="score-orb"><strong>{{ attempt.score|mark }}</strong><span>out of {{ attempt.max_score|mark }}</span></div>
+  {% else %}<div class="pending-lock"><strong>Submitted</strong><span>Answers become available after the scheduled exam ends.</span></div>{% endif %}
 </section>
 
 <div class="metric-grid">
-  <article><span>Attempted</span><strong>{{ attempt.attempted_count }} / {{ attempt.exam.total_questions }}</strong></article>
-  <article><span>Unanswered</span><strong>{{ attempt.exam.total_questions - attempt.attempted_count }}</strong></article>
-  {% if reveal_answers %}<article><span>Wrong</span><strong>{{ attempt.wrong_count }}</strong></article>{% endif %}
-  <article><span>Focus flags</span><strong>{{ attempt.suspicious_event_count }}</strong></article>
+  {{ ui.metric("Attempted", attempt.attempted_count ~ " / " ~ attempt.exam.total_questions) }}
+  {{ ui.metric("Unanswered", attempt.exam.total_questions - attempt.attempted_count) }}
+  {% if reveal_answers %}{{ ui.metric("Wrong", attempt.wrong_count) }}{% endif %}
+  {{ ui.metric("Monitoring flags", attempt.suspicious_event_count) }}
 </div>
 
 <section class="section-block">
-  <div class="section-heading"><h2>Question review</h2><a href="/student/exams">Back to exams</a></div>
+  {{ ui.section_header("Answers", action_href="/student/exams", action_label="Back to exams") }}
   <div class="review-list">
   {% for row in review.rows %}
     <article class="review-row {% if row.is_correct == true %}review-correct{% elif row.is_correct == false %}review-wrong{% endif %}">
       <div class="review-number">{{ row.position }}</div>
-      <div><h3>{{ row.text }}</h3><p><span>Your answer</span>{{ row.selected_label }} · {{ row.selected }}</p>{% if reveal_answers %}<p><span>Correct answer</span>{{ row.correct_label }} · {{ row.correct }}</p>{% else %}<p class="muted">{{ row.correct }}</p>{% endif %}</div>
+      <div><h3>{{ row.text }}</h3><p><span>Your answer</span>{{ row.selected_label }} · {{ row.selected }}</p>{% if reveal_answers %}<p><span>Correct answer</span>{{ row.correct_label }} · {{ row.correct }}</p>{% else %}<p>{{ row.correct }}</p>{% endif %}</div>
       <div class="review-score">{% if row.marks is not none %}{{ row.marks|signed_mark }}{% endif %}<small>{{ row.time|human_seconds }}</small></div>
     </article>
   {% endfor %}
@@ -31,7 +29,7 @@
 
 {% if analysis and analysis.leaderboard %}
 <section class="section-block">
-  <div class="section-heading"><h2>Leaderboard</h2><span>Score, then completion time</span></div>
+  {{ ui.section_header("Leaderboard", "Ordered by score, then completion time") }}
   <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Time</th></tr></thead><tbody>
   {% for row in analysis.leaderboard %}<tr class="{% if row.student.id == user.id %}highlight-row{% endif %}"><td>#{{ row.rank }}</td><td>{{ row.student.full_name }}</td><td>{{ row.score|mark }} / {{ row.max_score|mark }}</td><td>{{ row.time|human_seconds }}</td></tr>{% endfor %}
   </tbody></table></div>

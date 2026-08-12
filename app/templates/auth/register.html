@@ -3,24 +3,19 @@
 {% block content %}
 <section class="auth-layout">
   <div class="auth-intro">
-    <span class="eyebrow">Get started</span>
-    <h1>Create your workspace identity.</h1>
-    <p>Student accounts can take exams. Instructor accounts can create assessments and provision examiners.</p>
+    <h1>Create your account.</h1>
+    <p>Students can take exams. Instructors can create exams and manage invigilators.</p>
+    <div class="auth-points"><span>Start in a few minutes</span><span>No separate desktop app</span><span>Use any modern browser</span></div>
   </div>
   <form class="form-card" method="post" action="/auth/register">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <div class="form-heading"><h2>Create account</h2><p>Use a unique username and a strong password.</p></div>
+    <div class="form-heading"><h2>Your details</h2><p>Choose the account type that matches your work.</p></div>
     <label>Full name<input name="full_name" value="{{ full_name or '' }}" autocomplete="name" required></label>
     <label>Username<input name="username" value="{{ username or '' }}" autocomplete="username" required></label>
-    <label>Password<input type="password" name="password" autocomplete="new-password" minlength="8" required><small>At least 8 characters.</small></label>
-    <label>Account type
-      <select name="role">
-        <option value="student" {% if selected_role != 'instructor' %}selected{% endif %}>Student</option>
-        {% if allow_instructor_registration %}<option value="instructor" {% if selected_role == 'instructor' %}selected{% endif %}>Instructor</option>{% endif %}
-      </select>
-    </label>
+    <label>Password<input type="password" name="password" autocomplete="new-password" minlength="8" required><small>Use at least 8 characters.</small></label>
+    <label>Account type<select name="role"><option value="student" {% if selected_role != 'instructor' %}selected{% endif %}>Student</option>{% if allow_instructor_registration %}<option value="instructor" {% if selected_role == 'instructor' %}selected{% endif %}>Instructor</option>{% endif %}</select></label>
     <button class="button button-full" type="submit">Create account</button>
-    <p class="form-footnote">Already registered? <a href="/auth/login">Sign in</a>.</p>
+    <p class="form-footnote">Already registered? <a href="/auth/login">Sign in</a></p>
   </form>
 </section>
 {% endblock %}

@@ -1,56 +1,40 @@
 {% extends "base.html" %}
+{% import "templates.html" as ui %}
 {% block content %}
-<section class="page-heading split-heading">
-  <div><span class="eyebrow">Instructor workspace</span><h1>Build, schedule, and understand.</h1><p>Your published exams and monitoring team are ready from one place.</p></div>
-  <a class="button" href="/instructor/exams/new">Upload new exam</a>
-</section>
+{{ ui.page_header("My exams", "Create exams, review results, and manage invigilators.", "/instructor/exams/new", "Create exam") }}
 
 <section class="section-block">
-  <div class="section-heading"><h2>Your exams</h2><a href="/instructor/exams/new">Add exam</a></div>
+  {{ ui.section_header("Exams", action_href="/instructor/exams/new", action_label="Add exam") }}
   <div class="card-grid card-grid-wide">
   {% for exam in exams %}
     <article class="exam-card">
       <div class="card-kicker"><span class="type-badge type-{{ exam.exam_type.value }}">{{ exam.exam_type.value }}</span><span>{{ exam.attempts|length }} attempts</span></div>
       <h3>{{ exam.name }}</h3>
       <p>{{ exam.total_questions }} questions · {{ exam.duration_minutes }} minutes</p>
-      <dl class="detail-grid compact-details"><div><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div><div><dt>Status</dt><dd>{% if exam.status.value == 'archived' %}Ended{% else %}{{ exam.status.value|title }}{% endif %}</dd></div></dl>
-      <div class="card-actions"><a class="button button-secondary" href="/instructor/exams/{{ exam.id }}">Manage</a><a class="button" href="/instructor/exams/{{ exam.id }}/analysis">Analysis</a></div>
+      <dl class="detail-grid compact-details"><div><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div><div><dt>Status</dt><dd>{% if exam.status.value == 'archived' %}Ended{% else %}Published{% endif %}</dd></div></dl>
+      <div class="card-actions"><a class="button button-secondary" href="/instructor/exams/{{ exam.id }}">Manage</a><a class="button" href="/instructor/exams/{{ exam.id }}/analysis">Results</a></div>
     </article>
   {% else %}
-    <div class="empty-panel full-span"><h3>No exams yet</h3><p>Upload your first TXT question paper to begin.</p><a class="button" href="/instructor/exams/new">Upload exam</a></div>
+    <div class="full-span">{{ ui.empty_state("No exams yet", "Create your first exam from a TXT question paper.", "/instructor/exams/new", "Create exam") }}</div>
   {% endfor %}
   </div>
 </section>
 
 <section class="section-block split-panel">
-  <div>
-    <span class="eyebrow">Monitoring team</span><h2>Create an invigilator account</h2><p>Invigilator registration is intentionally controlled by instructors.</p>
-  </div>
+  <div><h2>Create an invigilator</h2><p>Invigilators can only monitor exams that you assign to them.</p></div>
   <form class="inline-card-form" action="/instructor/examiners/new" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>Full name<input name="full_name" required></label>
     <label>Username<input name="username" required></label>
     <label>Temporary password<input type="password" name="password" minlength="8" required></label>
-    <button class="button" type="submit">Create invigilator</button>
+    <button class="button" type="submit">Create</button>
   </form>
 </section>
 
 <section class="section-block">
-  <div class="section-heading"><h2>Invigilator accounts</h2><span>Deleting an account immediately revokes all monitoring access</span></div>
-  {% if examiners %}
-  <div class="account-list">
-    {% for examiner in examiners %}
-    <article class="account-row">
-      <div class="user-chip"><span>{{ examiner.full_name[:1] }}</span><div><strong>{{ examiner.full_name }}</strong><small>{{ examiner.username }} · {{ examiner.examiner_assignments|length }} assigned exam{% if examiner.examiner_assignments|length != 1 %}s{% endif %}</small></div></div>
-      <form action="/instructor/examiners/{{ examiner.id }}/delete" method="post" class="js-confirm-form" data-confirm="Delete {{ examiner.full_name }} permanently? They will immediately lose access to every assigned exam.">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button class="button button-danger button-small" type="submit">Delete account</button>
-      </form>
-    </article>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty-panel"><h3>No invigilator accounts</h3><p>Create one above when you are ready to assign live monitoring.</p></div>
-  {% endif %}
+  {{ ui.section_header("Invigilators", "Deleting an account removes its access immediately") }}
+  {% if examiners %}<div class="account-list">
+    {% for examiner in examiners %}<article class="account-row"><div class="user-chip"><span>{{ examiner.full_name[:1] }}</span><div><strong>{{ examiner.full_name }}</strong><small>{{ examiner.username }} · {{ examiner.examiner_assignments|length }} assigned exam{% if examiner.examiner_assignments|length != 1 %}s{% endif %}</small></div></div><form action="/instructor/examiners/{{ examiner.id }}/delete" method="post" class="js-confirm-form" data-confirm="Delete {{ examiner.full_name }} permanently? They will immediately lose access to every assigned exam."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-danger button-small" type="submit">Delete account</button></form></article>{% endfor %}
+  </div>{% else %}{{ ui.empty_state("No invigilators", "Create an account above when someone needs monitoring access.") }}{% endif %}
 </section>
 {% endblock %}
