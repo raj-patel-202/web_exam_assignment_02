@@ -5,9 +5,26 @@
   <div class="auth-intro">
     <h1>Welcome back.</h1>
     <p>Sign in to open your exams, results, or assigned monitoring rooms.</p>
-    <div class="auth-points"><span>One sign-in for every role</span><span>Your work stays saved</span><span>Secure password storage</span></div>
+    <div class="auth-info-cards">
+      <div class="auth-info-card doodle-card">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <h3>Quick Access</h3>
+        <p>Jump right back into your active exams or monitoring duties.</p>
+      </div>
+      <div class="auth-info-card doodle-card">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+        <h3>Real-time Sync</h3>
+        <p>All your submissions and events are continuously backed up.</p>
+      </div>
+      <div class="auth-info-card doodle-card">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+        <h3>Secure Session</h3>
+        <p>Your connection is protected with industry-standard security.</p>
+      </div>
+    </div>
   </div>
-  <form class="form-card" method="post" action="/auth/login">
+  <form class="form-card doodle-card" method="post" action="/auth/login">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-heading"><h2>Sign in</h2><p>Use the username and password for your account.</p></div>
     <label>Username<input name="username" value="{{ username or '' }}" autocomplete="username" required autofocus></label>

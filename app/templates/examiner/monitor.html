@@ -3,10 +3,56 @@
 {% block shell_class %}monitor-shell{% endblock %}
 {% block content %}
 <header class="monitor-header">
-  <div><a class="back-link" href="/examiner">← Monitoring rooms</a><h1>{{ exam.name }}</h1><div class="examiner-exam-capsules monitor-exam-capsules"><span class="summary-chip summary-duration">Duration · {{ exam.duration_minutes }} min</span><span class="summary-chip summary-questions">Questions · {{ exam.total_questions }}</span><span class="summary-chip summary-start">Starts · {{ exam.start_at|local_datetime }}</span><span class="status-pill {{ exam_status.tone }} examiner-card-status">Status · {{ exam_status.label }}</span></div></div>
+  <div>
+    <a class="back-link" href="/examiner">← Monitoring rooms</a>
+    <h1>{{ exam.name }}</h1>
+  </div>
   <strong class="examiner-exam-countdown timer-{{ exam_status.label|lower }} examiner-monitor-countdown" data-exam-start-at="{{ start_at_iso }}" data-exam-end-at="{{ end_at_iso }}" data-exam-ended="{{ 'true' if exam_status.label == 'Ended' else 'false' }}" {% if exam_status.label == 'Ended' %}hidden{% endif %}>{{ exam_time_status }}</strong>
 </header>
-<div class="monitor-summary-capsules" id="monitor-metrics"><span class="summary-chip monitor-sessions">Sessions · <strong data-metric="total">0</strong></span><span class="summary-chip monitor-online">Online · <strong data-metric="online">0</strong></span><span class="summary-chip monitor-submitted">Submitted · <strong data-metric="submitted">0</strong></span><span class="summary-chip monitor-flags">Flags · <strong data-metric="flags">0</strong></span></div>
+<div class="analysis-stats-grid" style="margin-bottom: 45px;">
+  <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <span class="stat-label">Duration</span>
+    <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.duration_minutes }} <small>min</small></strong>
+  </div>
+  <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="108" cy="8" r="9" fill="rgba(101,70,154,.09)"/><rect x="8" y="28" width="12" height="8" rx="3" fill="none" stroke="rgba(72,165,255,.15)" stroke-width="1.1" transform="rotate(-10 14 32)"/><path d="M 40 10 c 5 -5 10 5 15 0" fill="none" stroke="rgba(34,164,107,.2)" stroke-width="1.2" stroke-linecap="round"/><circle cx="80" cy="35" r="4" fill="rgba(245,166,35,.12)"/></svg>
+    <span class="stat-label">Questions</span>
+    <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.total_questions }}</strong>
+  </div>
+  <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
+    <span class="stat-label">Starts</span>
+    <strong class="stat-value" style="font-size: .95rem; margin-top: 2px;">{{ exam.start_at|local_datetime }}</strong>
+  </div>
+  <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+    <span class="stat-label">Status</span>
+    <strong class="stat-value"><span class="status-pill {{ exam_status.tone }} examiner-card-status">{{ exam_status.label }}</span></strong>
+  </div>
+</div>
+<div class="analysis-stats-grid" id="monitor-metrics" style="margin-bottom: 20px;">
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+    <span class="stat-label">Total Sessions</span>
+    <strong class="stat-value" data-metric="total" style="color: #086fcf;">0</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <span class="stat-label">Online</span>
+    <strong class="stat-value" data-metric="online" style="color: #1a8f5c;">0</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="108" cy="8" r="9" fill="rgba(101,70,154,.09)"/><rect x="8" y="28" width="12" height="8" rx="3" fill="none" stroke="rgba(72,165,255,.15)" stroke-width="1.1" transform="rotate(-10 14 32)"/><path d="M 40 10 c 5 -5 10 5 15 0" fill="none" stroke="rgba(34,164,107,.2)" stroke-width="1.2" stroke-linecap="round"/><circle cx="80" cy="35" r="4" fill="rgba(245,166,35,.12)"/></svg>
+    <span class="stat-label">Submitted</span>
+    <strong class="stat-value" data-metric="submitted" style="color: #65469a;">0</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="14" r="10" fill="rgba(72,165,255,.09)"/><path d="M12 32c4-8 12-6 10 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/><circle cx="60" cy="10" r="4" fill="rgba(228,95,101,.12)"/><circle cx="110" cy="8" r="3" fill="rgba(101,70,154,.15)"/></svg>
+    <span class="stat-label">Flags</span>
+    <strong class="stat-value" data-metric="flags" style="color: #d42b35;">0</strong>
+  </div>
+</div>
 <div class="monitor-toolbar"><div class="filter-tabs" id="monitor-filters"><button class="active" data-filter="all">All students</button><button data-filter="flagged">Flagged</button><button data-filter="offline">Disconnected</button><button data-filter="submitted">Submitted</button></div><button class="button button-secondary button-small" id="refresh-monitor" type="button">Refresh</button></div>
 <div class="monitor-grid">
   <section class="section-block monitor-students">{{ ui.section_header("Student activity") }}<span id="student-count-label" hidden>0 sessions</span><div class="table-wrap"><table><thead><tr><th>Student</th><th>Status</th><th>Progress</th><th>Question</th><th>Last signal</th><th>Flags</th></tr></thead><tbody id="monitor-student-body"></tbody></table></div><div class="empty-panel" id="monitor-empty"><span class="empty-icon">○</span><h3>No sessions yet</h3><p>Students appear here when they start the exam.</p></div></section>

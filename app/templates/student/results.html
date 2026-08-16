@@ -1,26 +1,58 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
 {% block content %}
-{{ ui.page_header("Results") }}
+{{ ui.page_header("Results", back_href="/student", back_label="Home") }}
 
 {% if result_rows %}
 <div class="card-grid card-grid-wide student-result-grid">
   {% for row in result_rows %}
   {% set attempt = row.attempt %}
-  <article class="student-result-card">
+  <article class="student-result-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
     <header class="student-result-header"><h2>{{ attempt.exam.name }}</h2></header>
     <div class="student-result-dates">
       <span>Held on · {{ attempt.exam.start_at|local_datetime }}</span>
       <span>Submitted · {{ attempt.submitted_at|local_datetime }}</span>
     </div>
-    <div class="student-result-facts">
-      {% if row.reveal_answers %}<div class="result-fact result-score"><span>Score</span><strong>{{ attempt.score|mark }} / {{ attempt.max_score|mark }}</strong></div>
-      {% else %}<div class="result-fact result-score-pending"><span>Score</span><strong>After exam ends</strong></div>{% endif %}
-      <div class="result-fact result-time"><span>Time</span><strong>{{ attempt.total_time_seconds|human_seconds }}</strong></div>
-      <div class="result-fact result-answered"><span>Attempted</span><strong>{{ attempt.attempted_count }} / {{ attempt.exam.total_questions }}</strong></div>
-      <div class="result-fact result-duration"><span>Duration</span><strong>{{ attempt.exam.duration_minutes }} min</strong></div>
-      <div class="result-fact result-questions"><span>Questions</span><strong>{{ attempt.exam.total_questions }}</strong></div>
-      <div class="result-fact result-marks"><span>Marks</span><strong>{{ attempt.exam.positive_marks|signed_mark }} / {{ attempt.exam.negative_marks|signed_mark }}</strong></div>
+    <div class="analysis-stats-grid" style="margin-bottom: 20px;">
+      {% if row.reveal_answers %}
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="stat-label">Score</span>
+        <strong class="stat-value" style="font-size: 1.05rem; color: var(--green);">{{ attempt.score|mark }} <small>/ {{ attempt.max_score|mark }}</small></strong>
+      </div>
+      {% else %}
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="stat-label">Score</span>
+        <strong class="stat-value" style="font-size: .85rem; color: var(--text-soft);">Pending</strong>
+      </div>
+      {% endif %}
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+        <span class="stat-label">Time</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ attempt.total_time_seconds|human_seconds }}</strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+        <span class="stat-label">Attempted</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ attempt.attempted_count }} <small>/ {{ attempt.exam.total_questions }}</small></strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="108" cy="8" r="9" fill="rgba(101,70,154,.09)"/><rect x="8" y="28" width="12" height="8" rx="3" fill="none" stroke="rgba(72,165,255,.15)" stroke-width="1.1" transform="rotate(-10 14 32)"/><path d="M 40 10 c 5 -5 10 5 15 0" fill="none" stroke="rgba(34,164,107,.2)" stroke-width="1.2" stroke-linecap="round"/><circle cx="80" cy="35" r="4" fill="rgba(245,166,35,.12)"/></svg>
+        <span class="stat-label">Duration</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ attempt.exam.duration_minutes }} <small>min</small></strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
+        <span class="stat-label">Questions</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ attempt.exam.total_questions }}</strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="stat-label">Marks/Q</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ attempt.exam.positive_marks|signed_mark }}</strong>
+      </div>
     </div>
     <a class="button button-full" href="/student/attempts/{{ attempt.id }}/result">View result</a>
   </article>

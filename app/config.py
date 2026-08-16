@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    app_name: str = "Exam Sentinel"
+    app_name: str = "ExamFlow"
     app_env: str = "development"
     debug: bool = False
     secret_key: str = Field(

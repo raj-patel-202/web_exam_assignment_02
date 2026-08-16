@@ -35,7 +35,11 @@ def exam_analysis(db: Session, exam: Exam) -> dict[str, object]:
     )
     total_attempts = len(attempts)
     scores = [attempt.score or Decimal("0.00") for attempt in attempts]
-    times = [attempt.total_time_seconds for attempt in attempts]
+    
+    def attempt_time(attempt: ExamAttempt) -> int:
+        return sum(r.time_spent_seconds for r in attempt.responses)
+        
+    times = [attempt_time(attempt) for attempt in attempts]
 
     question_rows: list[dict[str, object]] = []
     for question in questions:
@@ -83,9 +87,23 @@ def exam_analysis(db: Session, exam: Exam) -> dict[str, object]:
             }
         )
 
+    def get_attempted_count(attempt: ExamAttempt) -> int:
+        return sum(r.selected_option_id is not None for r in attempt.responses)
+        
+    def get_wrong_count(attempt: ExamAttempt) -> int:
+        question_map = {q.id: q for q in questions}
+        wrong = 0
+        for r in attempt.responses:
+            if r.selected_option_id is not None:
+                q = question_map[r.question_id]
+                correct_opt = next(o for o in q.options if o.is_correct)
+                if r.selected_option_id != correct_opt.id:
+                    wrong += 1
+        return wrong
+
     leaderboard = sorted(
         attempts,
-        key=lambda attempt: (-(attempt.score or 0), attempt.total_time_seconds, attempt.id),
+        key=lambda attempt: (-(attempt.score or 0), attempt_time(attempt), attempt.id),
     )
     leaderboard_rows = [
         {
@@ -93,15 +111,15 @@ def exam_analysis(db: Session, exam: Exam) -> dict[str, object]:
             "attempt_id": attempt.id,
             "student": attempt.student,
             "score": attempt.score or Decimal("0.00"),
-            "max_score": attempt.max_score or exam.total_questions * exam.positive_marks,
+            "max_score": exam.total_questions * exam.positive_marks,
             "percent": (
-                100 * (attempt.score or 0) / attempt.max_score
-                if attempt.max_score
+                100 * (attempt.score or 0) / (exam.total_questions * exam.positive_marks)
+                if (exam.total_questions * exam.positive_marks) > 0
                 else 0.0
             ),
-            "time": attempt.total_time_seconds,
-            "attempted": attempt.attempted_count,
-            "wrong": attempt.wrong_count,
+            "time": attempt_time(attempt),
+            "attempted": get_attempted_count(attempt),
+            "wrong": get_wrong_count(attempt),
         }
         for rank, attempt in enumerate(leaderboard, start=1)
     ]
@@ -122,23 +140,21 @@ def exam_analysis(db: Session, exam: Exam) -> dict[str, object]:
 
 
 def attempt_review(attempt: ExamAttempt, reveal_answers: bool) -> dict[str, object]:
-    question_map = {question.id: question for question in attempt.exam.questions}
     response_map = {response.question_id: response for response in attempt.responses}
     rows: list[dict[str, object]] = []
-    for display_position, question_id in enumerate(attempt.question_order, start=1):
-        question = question_map[int(question_id)]
+    
+    questions = sorted(attempt.exam.questions, key=lambda q: q.position)
+    
+    for display_position, question in enumerate(questions, start=1):
         response = response_map[question.id]
-        option_map = {option.id: option for option in question.options}
-        ordered_option_ids = attempt.option_orders.get(str(question.id)) or [
-            option.id for option in question.options
-        ]
+        ordered_options = sorted(question.options, key=lambda o: o.position)
+        
         display_options = []
         selected_label = "—"
         correct_label = "—"
         selected_text = "Not answered"
         correct_text = "Available after the exam ends"
-        for option_index, option_id in enumerate(ordered_option_ids):
-            option = option_map[int(option_id)]
+        for option_index, option in enumerate(ordered_options):
             display_label = chr(ord("A") + option_index)
             is_selected = response.selected_option_id == option.id
             if is_selected:

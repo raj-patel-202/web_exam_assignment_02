@@ -1,2 +1,2 @@
-"""Exam Sentinel web application."""
+"""ExamFlow web examination system."""
 

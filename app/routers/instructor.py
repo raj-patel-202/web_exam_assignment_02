@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -14,7 +14,6 @@ from app.database import get_db
 from app.main import flash, render
 from app.models import (
     AttemptStatus,
-    AuditLog,
     Exam,
     ExamAttempt,
     ExaminerAssignment,
@@ -151,7 +150,7 @@ def performance(request: Request, db: Session = Depends(get_db)):
             select(Exam)
             .where(Exam.created_by_id == user.id)
             .order_by(Exam.created_at.desc())
-            .options(selectinload(Exam.attempts))
+            .options(selectinload(Exam.attempts).selectinload(ExamAttempt.responses))
         )
     )
     performance_rows = []
@@ -168,7 +167,7 @@ def performance(request: Request, db: Session = Depends(get_db)):
             else Decimal("0.00")
         )
         average_time = (
-            sum(attempt.total_time_seconds for attempt in submitted) / len(submitted)
+            sum(sum(r.time_spent_seconds for r in attempt.responses) for attempt in submitted) / len(submitted)
             if submitted
             else 0.0
         )
@@ -235,13 +234,11 @@ def new_exam_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/exams/new")
-async def new_exam(
+def new_exam(
     request: Request,
     name: str = Form(...),
     duration_minutes: int = Form(...),
-    join_grace_minutes: int = Form(5),
     positive_marks: Decimal = Form(Decimal("4.00")),
-    negative_marks: Decimal = Form(Decimal("-1.00")),
     start_at: str = Form(""),
     csrf_token: str = Form(...),
     exam_file: UploadFile = File(...),
@@ -252,20 +249,14 @@ async def new_exam(
     form_values = {
         "name": name,
         "duration_minutes": duration_minutes,
-        "join_grace_minutes": join_grace_minutes,
         "positive_marks": str(positive_marks),
-        "negative_marks": str(negative_marks),
         "start_at": start_at,
     }
     error: str | None = None
     quantized_positive: Decimal | None = None
-    quantized_negative: Decimal | None = None
-    if positive_marks.is_finite() and negative_marks.is_finite():
+    if positive_marks.is_finite():
         try:
             quantized_positive = positive_marks.quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-            quantized_negative = negative_marks.quantize(
                 Decimal("0.01"), rounding=ROUND_HALF_UP
             )
         except InvalidOperation:
@@ -276,12 +267,8 @@ async def new_exam(
         error = "Exam name is required and must not exceed 160 characters."
     elif duration_minutes < 1 or duration_minutes > 720:
         error = "Duration must be between 1 and 720 minutes."
-    elif join_grace_minutes < 0 or join_grace_minutes > 120:
-        error = "Joining grace period must be between 0 and 120 minutes."
     elif quantized_positive is None or quantized_positive <= 0 or quantized_positive > Decimal(1000):
         error = "Positive marks must be greater than 0 and no more than 1000."
-    elif quantized_negative is None or quantized_negative > 0 or quantized_negative < Decimal(-1000):
-        error = "Negative marks must be between -1000 and 0."
     elif Path(exam_file.filename or "").suffix.lower() != ".txt":
         error = "Upload a .txt exam file."
 
@@ -296,12 +283,11 @@ async def new_exam(
         except ValueError:
             error = "Enter a valid scheduled start date and time."
 
-    raw = await exam_file.read(settings.max_exam_upload_bytes + 1)
+    raw = exam_file.file.read(settings.max_exam_upload_bytes + 1)
     if len(raw) > settings.max_exam_upload_bytes:
         error = "The exam file is larger than the allowed upload size."
 
     parsed_questions = []
-    source_text = ""
     if not error:
         try:
             source_text = decode_exam_upload(raw)
@@ -333,11 +319,7 @@ async def new_exam(
             exam_type=selected_type,
             start_at=scheduled_start,
             duration_minutes=duration_minutes,
-            join_grace_minutes=join_grace_minutes,
             positive_marks=quantized_positive,
-            negative_marks=quantized_negative,
-            source_filename=Path(exam_file.filename or "exam.txt").name,
-            source_text=source_text,
             creator=user,
             questions=parsed_questions,
         )
@@ -432,15 +414,6 @@ async def assign_examiner(
                 exam_id=exam.id, examiner_id=examiner.id, assigned_by_id=user.id
             )
         )
-        db.add(
-            AuditLog(
-                actor_id=user.id,
-                action="assign_examiner",
-                entity_type="exam",
-                entity_id=exam.id,
-                details={"examiner_id": examiner.id},
-            )
-        )
         db.commit()
     await manager.allow_examiner(exam.id, examiner.id)
     flash(request, f"{examiner.full_name} is assigned to {exam.name}.", "success")
@@ -472,15 +445,6 @@ async def unassign_examiner(
 
     examiner_name = assignment.examiner.full_name
     db.delete(assignment)
-    db.add(
-        AuditLog(
-            actor_id=user.id,
-            action="unassign_examiner",
-            entity_type="exam",
-            entity_id=exam.id,
-            details={"examiner_id": examiner_id},
-        )
-    )
     db.commit()
     await manager.revoke_examiner(examiner_id, exam.id)
     flash(request, f"{examiner_name} can no longer monitor {exam.name}.", "success")
@@ -506,20 +470,7 @@ async def delete_examiner(
         return RedirectResponse("/instructor/invigilators", status_code=303)
 
     examiner_name = examiner.full_name
-    assigned_exam_ids = [assignment.exam_id for assignment in examiner.examiner_assignments]
     db.delete(examiner)
-    db.add(
-        AuditLog(
-            actor_id=user.id,
-            action="delete_examiner",
-            entity_type="user",
-            entity_id=examiner_id,
-            details={
-                "username": examiner.username,
-                "assigned_exam_ids": assigned_exam_ids,
-            },
-        )
-    )
     db.commit()
     await manager.revoke_examiner(examiner_id)
     flash(request, f"{examiner_name}'s invigilator account was deleted.", "success")
@@ -548,11 +499,6 @@ async def delete_exam(
     )
 
     exam_name = exam.name
-    db.execute(
-        delete(AuditLog).where(
-            AuditLog.entity_type == "exam", AuditLog.entity_id == exam.id
-        )
-    )
     db.delete(exam)
     db.commit()
     await manager.remove_exam(exam_id, attempt_ids)

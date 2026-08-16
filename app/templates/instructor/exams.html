@@ -6,16 +6,33 @@
 <div class="card-grid card-grid-wide">
 {% for row in exam_rows %}
   {% set exam = row.exam %}
-  <article class="exam-card uploaded-exam-card">
+  <article class="exam-card uploaded-exam-card doodle-card">
+    <svg class="card-doodle" viewBox="0 0 320 60" aria-hidden="true" preserveAspectRatio="none">
+      <circle cx="290" cy="12" r="18" fill="rgba(72,165,255,.11)"/>
+      <circle cx="30" cy="50" r="12" fill="rgba(34,164,107,.09)"/>
+      <path d="M240 2l8 14 12-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="50" y="4" width="16" height="10" rx="3" fill="none" stroke="rgba(72,165,255,.18)" stroke-width="1.2" transform="rotate(-12 58 9)"/>
+    </svg>
     <div class="card-kicker">{{ ui.badge(row.status.label, row.status.tone) }}<span class="exam-fact-pill fact-questions">{{ exam.total_questions }} questions</span></div>
     <h2>{{ exam.name }}</h2>
-    <dl class="uploaded-exam-facts">
-      <div><dt>Created</dt><dd class="exam-fact-pill fact-created">{{ exam.created_at|local_datetime }}</dd></div>
-      <div><dt>Starts</dt><dd class="exam-fact-pill fact-starts">{{ exam.start_at|local_datetime }}</dd></div>
-      <div><dt>Ends</dt><dd class="exam-fact-pill fact-ends">{{ row.end_at|local_datetime }}</dd></div>
-      <div><dt>Students attempted</dt><dd class="exam-fact-pill fact-students">{{ row.student_count }}</dd></div>
-    </dl>
-    <a class="button button-secondary button-full" href="/instructor/exams/{{ exam.id }}">Manage exam</a>
+    <div class="analysis-stats-grid" style="margin-top: auto; margin-bottom: 15px; grid-template-columns: repeat(3, minmax(0, 1fr));">
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+        <span class="stat-label">Starts</span>
+        <strong class="stat-value" style="font-size: .95rem; margin-top: 2px;">{{ exam.start_at|local_datetime }}</strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="stat-label">Ends</span>
+        <strong class="stat-value" style="font-size: .95rem; margin-top: 2px;">{{ row.end_at|local_datetime }}</strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+        <span class="stat-label">Students</span>
+        <strong class="stat-value" style="font-size: 1.05rem; color: var(--blue-dark);">{{ row.student_count }}</strong>
+      </div>
+    </div>
+    <a class="button button-secondary button-full" style="margin-top: 15px;" href="/instructor/exams/{{ exam.id }}">Manage exam</a>
   </article>
 {% else %}
   <div class="full-span">{{ ui.empty_state("No uploaded exams", "Create your first exam from a TXT question paper.", "/instructor/exams/new", "Create exam") }}</div>

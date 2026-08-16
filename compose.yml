@@ -10,7 +10,7 @@ services:
     volumes:
       - exam_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U exam_user -d exam_system"]
+      test: [ "CMD-SHELL", "pg_isready -U exam_user -d exam_system" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,7 +27,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
 
 volumes:
   exam_postgres_data:

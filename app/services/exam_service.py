@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import random
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -11,7 +10,6 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import (
     AttemptStatus,
-    AuditLog,
     Exam,
     ExamAttempt,
     ExamStatus,
@@ -27,14 +25,12 @@ from app.services.exam_parser import ParsedQuestion
 class AttemptRuleError(ValueError):
     pass
 
-
 def aware_utc(value: datetime | None) -> datetime | None:
     if value is None:
         return None
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
-
 
 def create_exam(
     db: Session,
@@ -43,11 +39,7 @@ def create_exam(
     exam_type: ExamType,
     start_at: datetime | None,
     duration_minutes: int,
-    join_grace_minutes: int,
     positive_marks: Decimal = Decimal("4.00"),
-    negative_marks: Decimal = Decimal("-1.00"),
-    source_filename: str,
-    source_text: str,
     creator: User,
     questions: list[ParsedQuestion],
 ) -> Exam:
@@ -57,12 +49,8 @@ def create_exam(
         status=ExamStatus.PUBLISHED,
         start_at=aware_utc(start_at),
         duration_minutes=duration_minutes,
-        join_grace_minutes=join_grace_minutes,
         positive_marks=positive_marks,
-        negative_marks=negative_marks,
         total_questions=len(questions),
-        source_filename=source_filename,
-        source_text=source_text,
         created_by_id=creator.id,
     )
     for q_position, parsed_question in enumerate(questions, start=1):
@@ -82,27 +70,17 @@ def create_exam(
     db.refresh(exam)
     return exam
 
-
 def scheduled_end(exam: Exam) -> datetime | None:
     start_at = aware_utc(exam.start_at)
     if start_at is None:
         return None
-    # Students who join during the grace period still receive the full duration.
-    # Delay answer release until the last valid late-start attempt must be over.
-    return start_at + timedelta(
-        minutes=exam.duration_minutes + exam.join_grace_minutes
-    )
-
+    return start_at + timedelta(minutes=exam.duration_minutes)
 
 def scheduled_finish(exam: Exam) -> datetime | None:
-    """Return start time plus joining grace and the full exam duration."""
+    """Return start time plus the full exam duration."""
     return scheduled_end(exam)
 
-
-def exam_lifecycle_status(
-    exam: Exam, now: datetime | None = None
-) -> dict[str, str]:
-    """Return the display status for an exam at the requested time."""
+def exam_lifecycle_status(exam: Exam, now: datetime | None = None) -> dict[str, str]:
     now = aware_utc(now) or datetime.now(timezone.utc)
     if exam.status == ExamStatus.ARCHIVED:
         return {"label": "Ended", "tone": "danger"}
@@ -114,9 +92,7 @@ def exam_lifecycle_status(
         return {"label": "Running", "tone": "success"}
     return {"label": "Published", "tone": "warning"}
 
-
 def exam_time_status(exam: Exam, now: datetime | None = None) -> str:
-    """Return a compact schedule countdown for instructor views."""
     now = aware_utc(now) or datetime.now(timezone.utc)
     status = exam_lifecycle_status(exam, now)
     if status["label"] == "Ended":
@@ -140,7 +116,6 @@ def exam_time_status(exam: Exam, now: datetime | None = None) -> str:
     if start_at is not None and now < start_at:
         return f"Starts in · {value}"
     return f"Ends in · {value}"
-
 
 def exam_availability(
     exam: Exam,
@@ -168,10 +143,7 @@ def exam_availability(
     finish_at = scheduled_finish(exam)
     if finish_at and now >= finish_at:
         return {"state": "closed", "label": "Exam ended"}
-    if now > start_at + timedelta(minutes=exam.join_grace_minutes):
-        return {"state": "closed", "label": "Joining window closed"}
     return {"state": "available", "label": "Start scheduled exam"}
-
 
 def create_or_resume_attempt(
     db: Session,
@@ -209,26 +181,14 @@ def create_or_resume_attempt(
     if availability["state"] != "available":
         raise AttemptRuleError(str(availability["label"]))
 
-    question_ids = [question.id for question in exam.questions]
-    rng = random.SystemRandom()
-    rng.shuffle(question_ids)
-    option_orders: dict[str, list[int]] = {}
-    for question in exam.questions:
-        option_ids = [option.id for option in question.options]
-        rng.shuffle(option_ids)
-        option_orders[str(question.id)] = option_ids
-
-    attempt_number = 1
     attempt = ExamAttempt(
         exam_id=exam.id,
         student_id=student.id,
-        attempt_number=attempt_number,
+        attempt_number=1,
         status=AttemptStatus.IN_PROGRESS,
         started_at=now,
         activated_at=None,
         expires_at=None,
-        question_order=question_ids,
-        option_orders=option_orders,
         current_question_position=0,
         last_heartbeat_at=now,
     )
@@ -242,7 +202,6 @@ def create_or_resume_attempt(
         raise AttemptRuleError("This exam has already been started.") from exc
     db.refresh(attempt)
     return attempt, True
-
 
 def get_attempt_for_student(
     db: Session, attempt_id: int, student_id: int
@@ -258,13 +217,11 @@ def get_attempt_for_student(
         )
     )
 
-
 def activate_attempt(
     db: Session,
     attempt: ExamAttempt,
     now: datetime | None = None,
 ) -> ExamAttempt:
-    """Start the authoritative exam timer after the browser enters fullscreen."""
     now = aware_utc(now) or datetime.now(timezone.utc)
     attempt = db.scalar(
         select(ExamAttempt)
@@ -284,9 +241,6 @@ def activate_attempt(
     start_at = aware_utc(attempt.exam.start_at)
     if start_at is None or now < start_at:
         raise AttemptRuleError("This scheduled exam has not started yet.")
-    if now > start_at + timedelta(minutes=attempt.exam.join_grace_minutes):
-        submit_attempt(db, attempt, auto=True, now=now)
-        raise AttemptRuleError("The joining window closed before the exam was started.")
 
     attempt.started_at = now
     attempt.activated_at = now
@@ -296,15 +250,14 @@ def activate_attempt(
     db.refresh(attempt)
     return attempt
 
-
 def attempt_payload(attempt: ExamAttempt) -> list[dict[str, object]]:
-    questions = {question.id: question for question in attempt.exam.questions}
     response_map = {response.question_id: response for response in attempt.responses}
     payload: list[dict[str, object]] = []
-    for display_position, question_id in enumerate(attempt.question_order):
-        question = questions[int(question_id)]
-        option_map = {option.id: option for option in question.options}
-        ordered_options = attempt.option_orders.get(str(question.id), [])
+    
+    questions = sorted(attempt.exam.questions, key=lambda q: q.position)
+    
+    for display_position, question in enumerate(questions):
+        options = sorted(question.options, key=lambda o: o.position)
         response = response_map.get(question.id)
         payload.append(
             {
@@ -313,18 +266,17 @@ def attempt_payload(attempt: ExamAttempt) -> list[dict[str, object]]:
                 "text": question.text,
                 "options": [
                     {
-                        "id": option_map[int(option_id)].id,
+                        "id": option.id,
                         "display_label": chr(ord("A") + index),
-                        "text": option_map[int(option_id)].text,
+                        "text": option.text,
                     }
-                    for index, option_id in enumerate(ordered_options)
+                    for index, option in enumerate(options)
                 ],
                 "selected_option_id": response.selected_option_id if response else None,
                 "time_spent_seconds": response.time_spent_seconds if response else 0,
             }
         )
     return payload
-
 
 def save_response(
     db: Session,
@@ -377,7 +329,6 @@ def save_response(
     db.commit()
     return attempt
 
-
 def submit_attempt(
     db: Session,
     attempt: ExamAttempt,
@@ -407,38 +358,26 @@ def submit_attempt(
 
     question_map = {question.id: question for question in attempt.exam.questions}
     score = Decimal("0.00")
-    attempted_count = 0
-    wrong_count = 0
-    total_time = 0
     for response in attempt.responses:
         question = question_map[response.question_id]
         correct = next(option for option in question.options if option.is_correct)
         marks = Decimal("0.00")
-        if response.selected_option_id is not None:
-            attempted_count += 1
-            if response.selected_option_id == correct.id:
-                marks = attempt.exam.positive_marks
-            else:
-                marks = attempt.exam.negative_marks
-                wrong_count += 1
+        if response.selected_option_id is not None and response.selected_option_id == correct.id:
+            marks = attempt.exam.positive_marks
         response.marks_awarded = marks
         score += marks
-        total_time += response.time_spent_seconds
 
     attempt.score = score
     attempt.max_score = attempt.exam.total_questions * attempt.exam.positive_marks
-    attempt.attempted_count = attempted_count
-    attempt.wrong_count = wrong_count
-    attempt.total_time_seconds = min(
-        total_time, attempt.exam.duration_minutes * 60
-    )
+    attempt.total_time_seconds = sum((r.time_spent_seconds for r in attempt.responses), 0)
+    attempt.attempted_count = sum((1 for r in attempt.responses if r.selected_option_id is not None), 0)
+    attempt.wrong_count = sum((1 for r in attempt.responses if r.selected_option_id is not None and r.marks_awarded <= 0), 0)
     attempt.status = AttemptStatus.AUTO_SUBMITTED if auto else AttemptStatus.SUBMITTED
     attempt.submitted_at = now
     attempt.last_heartbeat_at = now
     db.commit()
     db.refresh(attempt)
     return attempt
-
 
 def auto_submit_expired_attempts(db: Session, now: datetime | None = None) -> int:
     now = aware_utc(now) or datetime.now(timezone.utc)
@@ -455,9 +394,7 @@ def auto_submit_expired_attempts(db: Session, now: datetime | None = None) -> in
         submit_attempt(db, attempt, auto=True, now=now)
     return len(attempts)
 
-
 def auto_end_scheduled_exams(db: Session, now: datetime | None = None) -> int:
-    """Close scheduled exams after joining grace plus their configured duration."""
     now = aware_utc(now) or datetime.now(timezone.utc)
     exams = list(
         db.scalars(
@@ -477,24 +414,11 @@ def auto_end_scheduled_exams(db: Session, now: datetime | None = None) -> int:
         if finish_at is None or finish_at > now:
             continue
         exam.status = ExamStatus.ARCHIVED
-        ended.append((exam, finish_at))
+        ended.append(exam)
 
-    for exam, finish_at in ended:
-        db.add(
-            AuditLog(
-                actor_id=None,
-                action="auto_end_exam",
-                entity_type="exam",
-                entity_id=exam.id,
-                details={
-                    "scheduled_finish_at": finish_at.isoformat(),
-                },
-            )
-        )
     if ended:
         db.commit()
     return len(ended)
-
 
 def can_review_attempt(attempt: ExamAttempt, now: datetime | None = None) -> bool:
     end_at = scheduled_end(attempt.exam)

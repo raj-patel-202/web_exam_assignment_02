@@ -132,7 +132,8 @@
     card.replaceChildren();
     const heading = create("div", "question-heading");
     heading.append(create("span", "question-label", `Question ${current + 1}`));
-    const clear = create("button", "clear-answer", "Clear answer");
+    const clear = create("button", "button button-secondary clear-answer", "Clear answer");
+    clear.style.marginLeft = "15px";
     clear.type = "button";
     clear.disabled = question.selected_option_id === null;
     clear.addEventListener("click", () => selectAnswer(null));

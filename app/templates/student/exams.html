@@ -1,20 +1,27 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
 {% block content %}
-{{ ui.page_header("Exams", "Choose an available exam or continue one already in progress.") }}
+{{ ui.page_header("Exams", "Choose an available exam or continue one already in progress.", back_href="/student", back_label="Home") }}
 <div class="card-grid card-grid-wide">
 {% for card in exam_cards %}
   {% set exam = card.exam %}
-  <article class="exam-card student-exam-card">
+  <article class="exam-card student-exam-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
     <div class="card-kicker card-kicker-title"><h2>{{ exam.name }}</h2><span class="student-question-count">{{ exam.total_questions }} questions</span></div>
     <p>{{ exam.creator.full_name }}</p>
-    <dl class="detail-grid compact-details student-exam-facts">
-      <div class="student-fact fact-duration"><dt>Duration</dt><dd>{{ exam.duration_minutes }} min</dd></div>
-      <div class="student-fact fact-marks"><dt>Marks</dt><dd>{{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</dd></div>
-      <div class="student-fact fact-start-time"><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div>
-      <div class="student-fact fact-attempts"><dt>Attempts</dt><dd>One</dd></div>
-    </dl>
     {% if card.availability.state == 'upcoming' %}<strong class="student-start-countdown" data-start-at="{{ card.start_at_iso }}">{{ card.start_countdown }}</strong>{% endif %}
+    <div class="analysis-stats-grid" style="margin-top: 10px; margin-bottom: 16px; grid-template-columns: repeat(2, minmax(0, 1fr));">
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="stat-label">Duration</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.duration_minutes }} <small>min</small></strong>
+      </div>
+      <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="108" cy="8" r="9" fill="rgba(101,70,154,.09)"/><rect x="8" y="28" width="12" height="8" rx="3" fill="none" stroke="rgba(72,165,255,.15)" stroke-width="1.1" transform="rotate(-10 14 32)"/><path d="M 40 10 c 5 -5 10 5 15 0" fill="none" stroke="rgba(34,164,107,.2)" stroke-width="1.2" stroke-linecap="round"/><circle cx="80" cy="35" r="4" fill="rgba(245,166,35,.12)"/></svg>
+        <span class="stat-label">Marks</span>
+        <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.positive_marks|signed_mark }}</strong>
+      </div>
+    </div>
     {% if card.availability.state == 'resume' %}<a class="button button-full" href="/student/attempts/{{ card.availability.attempt_id }}">{{ card.availability.label }}</a>
     {% elif card.availability.state == 'available' %}<button class="button button-full js-start-exam" data-exam-id="{{ exam.id }}">{{ card.availability.label }}</button>
     {% else %}<button class="button button-disabled button-full" disabled>{{ card.availability.label }}</button>{% endif %}

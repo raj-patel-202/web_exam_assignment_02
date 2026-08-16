@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block body_class %}hide-bg-doodle{% endblock %}
 {% block content %}
 <section class="welcome-hero instructor-welcome">
   <div class="welcome-copy">
@@ -19,22 +20,103 @@
       <rect x="91" y="150" width="203" height="126" rx="18" fill="#fff" stroke="#dbe5ef"/><rect x="116" y="176" width="111" height="10" rx="5" fill="#607086"/><rect x="116" y="201" width="151" height="8" rx="4" fill="#c3cfdb"/><rect x="116" y="221" width="126" height="8" rx="4" fill="#c3cfdb"/><rect x="116" y="241" width="143" height="8" rx="4" fill="#c3cfdb"/>
       <rect x="314" y="126" width="151" height="150" rx="18" fill="#fff" stroke="#dbe5ef"/><rect x="341" y="220" width="19" height="31" rx="7" fill="url(#teacher-chart)"/><rect x="372" y="187" width="19" height="64" rx="7" fill="url(#teacher-chart)"/><rect x="403" y="158" width="19" height="93" rx="7" fill="url(#teacher-chart)"/><path d="M338 174c27-13 47-7 81-42" fill="none" stroke="#22a46b" stroke-width="6" stroke-linecap="round"/><circle cx="419" cy="132" r="7" fill="#22a46b"/>
     </svg>
-    <div class="visual-caption"><strong>{{ submitted_attempt_count }}</strong><span>submitted attempt{% if submitted_attempt_count != 1 %}s{% endif %}</span></div>
   </div>
 </section>
 
 <div class="home-shortcut-grid instructor-shortcuts">
-  <a class="home-shortcut" href="/instructor/exams/new"><div class="shortcut-symbol blue" aria-hidden="true">＋</div><div><span class="shortcut-count">TXT question paper</span><h2>Create exam</h2><p>Upload questions, choose timing, and set positive and negative marks.</p><strong>Start creating <span>→</span></strong></div></a>
-  <a class="home-shortcut" href="/instructor/exams"><div class="shortcut-symbol violet" aria-hidden="true">▤</div><div><span class="shortcut-count">{{ exam_count }} uploaded</span><h2>Uploaded exams</h2><p>View exam information and open an exam when its setup needs attention.</p><strong>View exams <span>→</span></strong></div></a>
-  <a class="home-shortcut" href="/instructor/performance"><div class="shortcut-symbol green" aria-hidden="true">↗</div><div><span class="shortcut-count">{{ submitted_attempt_count }} submissions</span><h2>Student performance</h2><p>Choose an exam and open its detailed scores and question analysis.</p><strong>View performance <span>→</span></strong></div></a>
+  <a class="home-shortcut doodle-card" href="/instructor/exams/new">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <div class="shortcut-symbol blue" aria-hidden="true">＋</div><div><h2>Create exam</h2><p>Upload a TXT question paper, set timing and marks per question.</p><strong>Start creating <span>→</span></strong></div>
+  </a>
+  <a class="home-shortcut doodle-card" href="/instructor/exams">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="14" r="10" fill="rgba(72,165,255,.09)"/><path d="M12 32c4-8 12-6 10 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/><circle cx="60" cy="10" r="4" fill="rgba(228,95,101,.12)"/><circle cx="110" cy="8" r="3" fill="rgba(101,70,154,.15)"/></svg>
+    <div class="shortcut-symbol violet" aria-hidden="true">▤</div><div><h2>Uploaded exams</h2><p>View exam details, assign invigilators, or delete old papers.</p><strong>View exams <span>→</span></strong></div>
+  </a>
+  <a class="home-shortcut doodle-card" href="/instructor/performance">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+    <div class="shortcut-symbol green" aria-hidden="true">↗</div><div><h2>Student performance</h2><p>Scores, time analysis, question difficulty, and leaderboards.</p><strong>View performance <span>→</span></strong></div>
+  </a>
 </div>
 
-<section class="feature-story instructor-story">
-  <div class="feature-story-copy"><span>One exam workflow</span><h2>From a text file to a reviewed result.</h2><p>The platform keeps question data, attempts, timing, monitoring signals, and scores together in PostgreSQL while giving every role a focused workspace.</p><a class="text-link" href="/instructor/invigilators">Manage invigilators <span>→</span></a></div>
-  <div class="feature-points">
-    <article><i>01</i><div><strong>Flexible marking</strong><p>Set decimal positive marks and any zero or negative penalty.</p></div></article>
-    <article><i>02</i><div><strong>Scheduled control</strong><p>Exams open and end from their configured schedule and duration.</p></div></article>
-    <article><i>03</i><div><strong>Live invigilation</strong><p>Assigned invigilators can review focus, fullscreen, and connection events.</p></div></article>
+<section class="how-it-works instructor-how">
+  <div class="how-header">
+    <span class="how-kicker">Your workflow</span>
+    <h2>From a text file to graded results</h2>
+  </div>
+  <div class="how-steps">
+    <div class="how-step">
+      <div class="how-step-visual" aria-hidden="true">
+        <svg viewBox="0 0 180 140" class="doodle-svg">
+          <rect x="30" y="14" width="120" height="112" rx="14" fill="#fff" stroke="#d0dde9" stroke-width="2"/>
+          <path d="M58 36h64" stroke="#1a2b40" stroke-width="3" stroke-linecap="round"/>
+          <path d="M58 50h44" stroke="#b8c6d5" stroke-width="2" stroke-linecap="round"/>
+          <path d="M58 64h56" stroke="#b8c6d5" stroke-width="2" stroke-linecap="round"/>
+          <path d="M58 78h38" stroke="#b8c6d5" stroke-width="2" stroke-linecap="round"/>
+          <path d="M58 92h50" stroke="#b8c6d5" stroke-width="2" stroke-linecap="round"/>
+          <path d="M46 50l3 3 6-6" fill="none" stroke="#22a46b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M46 64l3 3 6-6" fill="none" stroke="#22a46b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M46 78l3 3 6-6" fill="none" stroke="#22a46b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="46" cy="92" r="4" fill="none" stroke="#c5d3e1" stroke-width="1.5"/>
+          <path d="M22 8c-4 8 2 14 8 6" fill="none" stroke="#55b4ff" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
+          <circle cx="158" cy="22" r="8" fill="#fff3d9" opacity=".6"/>
+          <circle cx="18" cy="118" r="6" fill="#e8f4ff" opacity=".5"/>
+        </svg>
+      </div>
+      <h3>Upload questions</h3>
+      <p>Paste your Q&amp;A into a simple text file, set the schedule, and publish.</p>
+    </div>
+    <div class="how-step-connector" aria-hidden="true">
+      <svg viewBox="0 0 60 24"><path d="M4 12h52" stroke="#c5d3e1" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/><path d="M48 6l8 6-8 6" fill="none" stroke="#c5d3e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="how-step">
+      <div class="how-step-visual" aria-hidden="true">
+        <svg viewBox="0 0 180 140" class="doodle-svg">
+          <rect x="18" y="12" width="144" height="116" rx="14" fill="#fff" stroke="#d0dde9" stroke-width="2"/>
+          <circle cx="50" cy="44" r="12" fill="#e6f3ff" stroke="#a8d1f5" stroke-width="1.5"/>
+          <rect x="42" y="40" width="16" height="8" rx="2" fill="none" stroke="#5a9bd5" stroke-width="1.5"/>
+          <path d="M47 44h6" stroke="#5a9bd5" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M50 41v6" stroke="#5a9bd5" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="72" y="38" width="72" height="6" rx="3" fill="#1a2b40" opacity=".7"/>
+          <rect x="72" y="50" width="52" height="4" rx="2" fill="#c5d3e1"/>
+          <circle cx="50" cy="78" r="12" fill="#e6f7ee" stroke="#8dd4ad" stroke-width="1.5"/>
+          <path d="M45 78l3 3 7-7" fill="none" stroke="#22a46b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="72" y="72" width="64" height="6" rx="3" fill="#1a2b40" opacity=".7"/>
+          <rect x="72" y="84" width="44" height="4" rx="2" fill="#c5d3e1"/>
+          <circle cx="50" cy="110" r="12" fill="#fff3d9" stroke="#e8c36a" stroke-width="1.5"/>
+          <path d="M46 110h8M50 106v8" stroke="#d4a017" stroke-width="1.8" stroke-linecap="round"/>
+          <rect x="72" y="104" width="58" height="6" rx="3" fill="#1a2b40" opacity=".7"/>
+          <rect x="72" y="116" width="38" height="4" rx="2" fill="#c5d3e1"/>
+          <circle cx="166" cy="20" r="7" fill="#e8f4ff" opacity=".6"/>
+          <path d="M14 130l6-10 8 4" fill="none" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/>
+        </svg>
+      </div>
+      <h3>Monitor live</h3>
+      <p>Assign invigilators to watch student focus, tab switches, and connection activity in real time.</p>
+    </div>
+    <div class="how-step-connector" aria-hidden="true">
+      <svg viewBox="0 0 60 24"><path d="M4 12h52" stroke="#c5d3e1" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/><path d="M48 6l8 6-8 6" fill="none" stroke="#c5d3e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="how-step">
+      <div class="how-step-visual" aria-hidden="true">
+        <svg viewBox="0 0 180 140" class="doodle-svg">
+          <rect x="24" y="14" width="132" height="112" rx="14" fill="#fff" stroke="#d0dde9" stroke-width="2"/>
+          <rect x="40" y="32" width="60" height="7" rx="4" fill="#1a2b40" opacity=".8"/>
+          <rect x="40" y="52" width="100" height="56" rx="10" fill="#f9fbff" stroke="#dce6f0" stroke-width="1.5"/>
+          <rect x="54" y="64" width="14" height="32" rx="5" fill="#d4e8d4"/><rect x="54" y="76" width="14" height="20" rx="5" fill="#22a46b"/>
+          <rect x="76" y="64" width="14" height="32" rx="5" fill="#d4e8ff"/><rect x="76" y="70" width="14" height="26" rx="5" fill="#0872dc"/>
+          <rect x="98" y="64" width="14" height="32" rx="5" fill="#d4e8d4"/><rect x="98" y="82" width="14" height="14" rx="5" fill="#22a46b"/>
+          <rect x="120" y="64" width="14" height="32" rx="5" fill="#ffe8d4"/><rect x="120" y="72" width="14" height="24" rx="5" fill="#f5a623"/>
+          <path d="M18 8l4 12 10-6" fill="none" stroke="#55b4ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+          <circle cx="164" cy="118" r="8" fill="#e6f7ee" opacity=".5"/>
+          <path d="M156 20c4-6 12-4 10 4" fill="none" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+        </svg>
+      </div>
+      <h3>Review performance</h3>
+      <p>Dive into scores, question-level analysis, time breakdowns, and ranked leaderboards.</p>
+    </div>
+  </div>
+  <div class="how-footer">
+    <a class="text-link" href="/instructor/invigilators">Manage invigilators <span>→</span></a>
   </div>
 </section>
 {% endblock %}

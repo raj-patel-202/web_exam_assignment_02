@@ -5,9 +5,26 @@
   <div class="auth-intro">
     <h1>Create your account.</h1>
     <p>Students can take exams. Instructors can create exams and manage invigilators.</p>
-    <div class="auth-points"><span>Start in a few minutes</span><span>No separate desktop app</span><span>Use any modern browser</span></div>
+    <div class="auth-info-cards">
+      <div class="auth-info-card doodle-card">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <h3>Get Started Instantly</h3>
+        <p>No complex setup or separate desktop applications required.</p>
+      </div>
+      <div class="auth-info-card doodle-card">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+        <h3>Role-Based Workflows</h3>
+        <p>Dedicated experiences optimized for instructors and students.</p>
+      </div>
+      <div class="auth-info-card doodle-card">
+        <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+        <h3>Browser Native</h3>
+        <p>Take exams or monitor sessions seamlessly from any modern browser.</p>
+      </div>
+    </div>
   </div>
-  <form class="form-card" method="post" action="/auth/register">
+  <form class="form-card doodle-card" method="post" action="/auth/register">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-heading"><h2>Your details</h2><p>Choose the account type that matches your work.</p></div>
     <label>Full name<input name="full_name" value="{{ full_name or '' }}" autocomplete="name" required></label>

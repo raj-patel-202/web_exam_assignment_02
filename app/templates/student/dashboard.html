@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block body_class %}hide-bg-doodle{% endblock %}
 {% block content %}
 <section class="welcome-hero student-welcome">
   <div class="welcome-copy">
@@ -21,27 +22,85 @@
       <rect x="328" y="270" width="125" height="38" rx="13" fill="url(#student-blue)"/><rect x="355" y="284" width="72" height="9" rx="5" fill="#fff" opacity=".95"/>
       <path d="M461 139l16 16 31-36" fill="none" stroke="#22a46b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <div class="visual-caption"><strong>{{ available_exam_count }}</strong><span>available exam{% if available_exam_count != 1 %}s{% endif %}</span></div>
   </div>
 </section>
 
 <div class="home-shortcut-grid student-shortcuts">
-  <a class="home-shortcut" href="/student/exams">
-    <div class="shortcut-illustration exam-illustration" aria-hidden="true"><span class="paper-line wide"></span><span class="paper-line"></span><span class="paper-choice selected"></span><span class="paper-choice"></span><span class="paper-choice"></span></div>
-    <div><span class="shortcut-count">{{ active_attempt_count }} active</span><h2>Exams</h2><p>See available papers, schedules, marking rules, and any attempt waiting for you.</p><strong>Go to exams <span>→</span></strong></div>
+  <a class="home-shortcut doodle-card" href="/student/exams">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <div class="shortcut-symbol blue" aria-hidden="true">▤</div><div><h2>Exams</h2><p>See available papers, schedules, marking rules, and any attempt waiting for you.</p><strong>Go to exams <span>→</span></strong></div>
   </a>
-  <a class="home-shortcut" href="/student/results">
-    <div class="shortcut-illustration result-illustration" aria-hidden="true"><span class="result-ring"></span><span class="result-bar one"></span><span class="result-bar two"></span><span class="result-bar three"></span></div>
-    <div><span class="shortcut-count">{{ result_count }} completed</span><h2>Results</h2><p>Review scores, time spent, selected answers, and detailed attempt feedback.</p><strong>Open results <span>→</span></strong></div>
+  <a class="home-shortcut doodle-card" href="/student/results">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+    <div class="shortcut-symbol green" aria-hidden="true">↗</div><div><h2>Results</h2><p>Review scores, time spent, selected answers, and detailed attempt feedback.</p><strong>Open results <span>→</span></strong></div>
   </a>
 </div>
 
-<section class="feature-story">
-  <div class="feature-story-copy"><span>Built around your attempt</span><h2>Your work stays clear from start to finish.</h2><p>Fullscreen entry, automatic saving, a server-controlled timer, and reconnect support help you focus on answering rather than managing the exam page.</p></div>
-  <div class="feature-points">
-    <article><i>01</i><div><strong>Saved as you answer</strong><p>Your latest response and question position are kept with the attempt.</p></div></article>
-    <article><i>02</i><div><strong>Time kept by the server</strong><p>Reloading the page does not reset or extend your exam timer.</p></div></article>
-    <article><i>03</i><div><strong>Results in one place</strong><p>Every completed attempt is available from the dedicated Results tab.</p></div></article>
+<section class="how-it-works">
+  <div class="how-header">
+    <span class="how-kicker">How it works</span>
+    <h2>Three steps, start to finish</h2>
+  </div>
+  <div class="how-steps">
+    <div class="how-step">
+      <div class="how-step-visual" aria-hidden="true">
+        <svg viewBox="0 0 180 140" class="doodle-svg">
+          <rect x="28" y="18" width="124" height="104" rx="16" fill="#fff" stroke="#d0dde9" stroke-width="2"/>
+          <rect x="44" y="38" width="72" height="8" rx="4" fill="#1a2b40" opacity=".85"/>
+          <rect x="44" y="56" width="92" height="6" rx="3" fill="#b8c6d5"/>
+          <circle cx="52" cy="80" r="6" fill="#dceeff" stroke="#7ab4e8" stroke-width="1.5"/>
+          <rect x="66" y="76" width="70" height="7" rx="4" fill="#c9d6e3"/>
+          <circle cx="52" cy="100" r="6" fill="#d0f0de" stroke="#4db882" stroke-width="1.5"/>
+          <path d="M49 100l2.5 2.5 5-5" fill="none" stroke="#4db882" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="66" y="96" width="58" height="7" rx="4" fill="#c9d6e3"/>
+          <circle cx="155" cy="28" r="11" fill="#e8f4ff" opacity=".7"/>
+          <circle cx="20" cy="120" r="8" fill="#e6f7ee" opacity=".6"/>
+        </svg>
+      </div>
+      <h3>Pick your exam</h3>
+      <p>Browse scheduled exams, check the duration and marking, then start when you're ready.</p>
+    </div>
+    <div class="how-step-connector" aria-hidden="true">
+      <svg viewBox="0 0 60 24"><path d="M4 12h52" stroke="#c5d3e1" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/><path d="M48 6l8 6-8 6" fill="none" stroke="#c5d3e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="how-step">
+      <div class="how-step-visual" aria-hidden="true">
+        <svg viewBox="0 0 180 140" class="doodle-svg">
+          <rect x="20" y="10" width="140" height="110" rx="14" fill="#fff" stroke="#d0dde9" stroke-width="2"/>
+          <rect x="34" y="26" width="48" height="7" rx="4" fill="#1a2b40" opacity=".8"/>
+          <rect x="34" y="42" width="112" height="38" rx="10" fill="#f7faff" stroke="#dce6f0" stroke-width="1.5"/>
+          <rect x="48" y="54" width="84" height="6" rx="3" fill="#97a8ba"/>
+          <rect x="48" y="66" width="60" height="5" rx="3" fill="#c9d6e3"/>
+          <rect x="100" y="90" width="46" height="22" rx="8" fill="#0872dc"/>
+          <rect x="112" y="98" width="24" height="6" rx="3" fill="#fff" opacity=".9"/>
+          <path d="M130 26c6-10 18-8 22 1" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="154" cy="27" r="3" fill="#f5a623"/>
+          <circle cx="12" cy="55" r="7" fill="#fff3d9" opacity=".8"/>
+          <circle cx="168" cy="105" r="9" fill="#e8f4ff" opacity=".6"/>
+        </svg>
+      </div>
+      <h3>Answer in fullscreen</h3>
+      <p>Go fullscreen, answer questions one by one. Your progress saves after each response.</p>
+    </div>
+    <div class="how-step-connector" aria-hidden="true">
+      <svg viewBox="0 0 60 24"><path d="M4 12h52" stroke="#c5d3e1" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/><path d="M48 6l8 6-8 6" fill="none" stroke="#c5d3e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="how-step">
+      <div class="how-step-visual" aria-hidden="true">
+        <svg viewBox="0 0 180 140" class="doodle-svg">
+          <rect x="26" y="16" width="128" height="108" rx="16" fill="#fff" stroke="#d0dde9" stroke-width="2"/>
+          <rect x="42" y="34" width="64" height="8" rx="4" fill="#1a2b40" opacity=".85"/>
+          <circle cx="90" cy="78" r="28" fill="none" stroke="#d4e8d4" stroke-width="8"/>
+          <path d="M90 50a28 28 0 0 1 24 42" fill="none" stroke="#22a46b" stroke-width="8" stroke-linecap="round"/>
+          <text x="90" y="84" text-anchor="middle" font-size="16" font-weight="700" fill="#1a2b40">8/10</text>
+          <path d="M28 8l-6 14 14-2" fill="none" stroke="#55b4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+          <circle cx="160" cy="18" r="6" fill="#e6f7ee" opacity=".7"/>
+          <path d="M148 118l8-4 4 8" fill="none" stroke="#f5a623" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+        </svg>
+      </div>
+      <h3>Get your results</h3>
+      <p>See your score, time per question, correct answers, and where you stand on the leaderboard.</p>
+    </div>
   </div>
 </section>
 {% endblock %}

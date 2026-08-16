@@ -91,9 +91,7 @@ class Exam(Base):
     __tablename__ = "exams"
     __table_args__ = (
         CheckConstraint("duration_minutes > 0", name="ck_exam_duration_positive"),
-        CheckConstraint("join_grace_minutes >= 0", name="ck_exam_grace_nonnegative"),
         CheckConstraint("positive_marks > 0", name="ck_exam_positive_marks"),
-        CheckConstraint("negative_marks <= 0", name="ck_exam_negative_marks"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -104,16 +102,10 @@ class Exam(Base):
     )
     start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     duration_minutes: Mapped[int] = mapped_column(Integer)
-    join_grace_minutes: Mapped[int] = mapped_column(Integer, default=5)
     positive_marks: Mapped[Decimal] = mapped_column(
         Numeric(8, 2), default=Decimal("4.00")
     )
-    negative_marks: Mapped[Decimal] = mapped_column(
-        Numeric(8, 2), default=Decimal("-1.00")
-    )
     total_questions: Mapped[int] = mapped_column(Integer)
-    source_filename: Mapped[str] = mapped_column(String(255))
-    source_text: Mapped[str] = mapped_column(Text)
     created_by_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -234,8 +226,6 @@ class ExamAttempt(Base):
         DateTime(timezone=True), index=True
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    question_order: Mapped[list[int]] = mapped_column(JSON, default=list)
-    option_orders: Mapped[dict[str, list[int]]] = mapped_column(JSON, default=dict)
     current_question_position: Mapped[int] = mapped_column(Integer, default=0)
     last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     score: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
@@ -304,17 +294,4 @@ class ProctorEvent(Base):
     attempt: Mapped[ExamAttempt] = relationship(back_populates="proctor_events")
 
 
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    actor_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), index=True
-    )
-    action: Mapped[str] = mapped_column(String(80), index=True)
-    entity_type: Mapped[str] = mapped_column(String(40))
-    entity_id: Mapped[int | None] = mapped_column(Integer)
-    details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, nullable=False
-    )

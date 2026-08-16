@@ -1,6 +1,6 @@
-# Exam Sentinel
+# ExamFlow
 
-Exam Sentinel is a database-backed web examination system built with FastAPI, PostgreSQL, SQLAlchemy, Jinja2, HTML, CSS, vanilla JavaScript, and WebSockets.
+ExamFlow is a database-backed web examination system built with FastAPI, PostgreSQL, SQLAlchemy, Jinja2, HTML, CSS, vanilla JavaScript, and WebSockets.
 
 ## Features
 

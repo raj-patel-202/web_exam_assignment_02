@@ -1,20 +1,34 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
+{% block body_class %}hide-bg-doodle{% endblock %}
 {% block content %}
 {{ ui.page_header("Monitoring") }}
 <div class="examiner-exam-list">
 {% for row in exam_rows %}
 {% set exam = row.exam %}
-<article class="exam-card examiner-exam-card" data-exam-start-at="{{ row.start_at_iso }}" data-exam-end-at="{{ row.end_at_iso }}" data-exam-ended="{{ 'true' if row.status.label == 'Ended' else 'false' }}">
+<article class="exam-card examiner-exam-card doodle-card" data-exam-start-at="{{ row.start_at_iso }}" data-exam-end-at="{{ row.end_at_iso }}" data-exam-ended="{{ 'true' if row.status.label == 'Ended' else 'false' }}">
+  <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="106" cy="30" r="11" fill="rgba(245,166,35,.1)"/><circle cx="12" cy="10" r="7" fill="rgba(72,165,255,.09)"/><rect x="50" y="8" width="6" height="6" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.2" transform="rotate(25 53 11)"/><path d="M 85 10 l -5 15 8 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/></svg>
   <div class="card-kicker"><span class="status-pill {{ row.status.tone }} examiner-card-status">Status · {{ row.status.label }}</span><span>{{ exam.attempts|length }} sessions</span></div>
   <h2>{{ exam.name }}</h2><p>{{ exam.creator.full_name }}</p>
-  <div class="examiner-exam-capsules" aria-label="Exam information">
-    <span class="summary-chip summary-duration">Duration · {{ exam.duration_minutes }} min</span>
-    <span class="summary-chip summary-questions">Questions · {{ exam.total_questions }}</span>
-    <span class="summary-chip summary-start">Starts · {{ exam.start_at|local_datetime }}</span>
+  <strong class="examiner-exam-countdown timer-{{ row.status.label|lower }}" {% if row.status.label == 'Ended' %}hidden{% endif %} style="margin-top: auto; margin-bottom: 20px;">{{ row.time_status }}</strong>
+  <div class="analysis-stats-grid" style="margin-top: auto; margin-bottom: 15px; grid-template-columns: repeat(3, minmax(0, 1fr));">
+    <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+      <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+      <span class="stat-label">Duration</span>
+      <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.duration_minutes }} <small>min</small></strong>
+    </div>
+    <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+      <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+      <span class="stat-label">Questions</span>
+      <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.total_questions }}</strong>
+    </div>
+    <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
+      <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+      <span class="stat-label">Starts</span>
+      <strong class="stat-value" style="font-size: .95rem; margin-top: 2px;">{{ exam.start_at|local_datetime }}</strong>
+    </div>
   </div>
-  <strong class="examiner-exam-countdown timer-{{ row.status.label|lower }}" {% if row.status.label == 'Ended' %}hidden{% endif %}>{{ row.time_status }}</strong>
-  <a class="button button-full" href="/examiner/exams/{{ exam.id }}/monitor">Open live room</a>
+  <a class="button button-full" style="margin-top: 15px;" href="/examiner/exams/{{ exam.id }}/monitor">Open live room</a>
 </article>
 {% else %}<div class="full-span">{{ ui.empty_state("No assigned exams", "An instructor must assign your account before an exam appears here.") }}</div>{% endfor %}
 </div>

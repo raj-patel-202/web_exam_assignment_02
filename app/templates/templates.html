@@ -24,7 +24,8 @@
 {% endmacro %}
 
 {% macro metric(label, value, detail='') %}
-<article class="metric-card">
+<article class="metric-card doodle-card">
+  <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
   <span>{{ label }}</span>
   <strong>{{ value }}</strong>
   {% if detail %}<small>{{ detail }}</small>{% endif %}

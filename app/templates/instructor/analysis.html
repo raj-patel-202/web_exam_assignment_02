@@ -2,24 +2,58 @@
 {% import "templates.html" as ui %}
 {% block content %}
 {{ ui.page_header(exam.name ~ " results", "Scores and question performance from submitted attempts.", back_href="/instructor/performance", back_label="Student performance") }}
-<div class="analysis-summary-capsules" aria-label="Performance summary">
-  <span class="summary-chip analysis-students">Students · {{ analysis.student_count }}</span>
-  <span class="summary-chip analysis-average">Average score · {{ analysis.average_score|mark }} / {{ analysis.max_score|mark }}</span>
-  <span class="summary-chip analysis-median">Median score · {{ analysis.median_score|mark }}</span>
-  <span class="summary-chip analysis-time">Average time · {{ analysis.average_time|round|int|human_seconds }}</span>
-  <span class="summary-chip analysis-duration">Duration · {{ exam.duration_minutes }} min</span>
-  <span class="summary-chip analysis-questions">Questions · {{ exam.total_questions }}</span>
-  <span class="summary-chip analysis-marks">Marks · {{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</span>
+
+<div class="analysis-stats-grid">
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="108" cy="8" r="9" fill="rgba(101,70,154,.09)"/><rect x="8" y="28" width="12" height="8" rx="3" fill="none" stroke="rgba(72,165,255,.15)" stroke-width="1.1" transform="rotate(-10 14 32)"/><path d="M 40 10 c 5 -5 10 5 15 0" fill="none" stroke="rgba(34,164,107,.2)" stroke-width="1.2" stroke-linecap="round"/><circle cx="80" cy="35" r="4" fill="rgba(245,166,35,.12)"/></svg>
+    <span class="stat-label">Students</span>
+    <strong class="stat-value">{{ analysis.student_count }}</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="12" r="12" fill="rgba(34,164,107,.1)"/><path d="M15 8l6 10 8-4" fill="none" stroke="rgba(245,166,35,.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="110" cy="30" r="5" fill="rgba(72,165,255,.12)"/><circle cx="40" cy="35" r="3" fill="rgba(228,95,101,.15)"/></svg>
+    <span class="stat-label">Average score</span>
+    <strong class="stat-value">{{ analysis.average_score|mark }} <small>/ {{ analysis.max_score|mark }}</small></strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
+    <span class="stat-label">Median score</span>
+    <strong class="stat-value">{{ analysis.median_score|mark }}</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
+    <span class="stat-label">Average time</span>
+    <strong class="stat-value">{{ analysis.average_time|round|int|human_seconds }}</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="104" cy="10" r="8" fill="rgba(34,164,107,.09)"/><path d="M10 30l8-6 6 10" fill="none" stroke="rgba(101,70,154,.18)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="32" r="5" fill="rgba(72,165,255,.12)"/><rect x="40" y="10" width="7" height="7" rx="2" fill="none" stroke="rgba(245,166,35,.2)" stroke-width="1.2" transform="rotate(-15 43 13)"/></svg>
+    <span class="stat-label">Duration</span>
+    <strong class="stat-value">{{ exam.duration_minutes }} min</strong>
+  </div>
+  <div class="stat-card doodle-card">
+    <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="100" cy="14" r="10" fill="rgba(72,165,255,.09)"/><path d="M12 32c4-8 12-6 10 2" fill="none" stroke="rgba(34,164,107,.22)" stroke-width="1.2" stroke-linecap="round"/><circle cx="60" cy="10" r="4" fill="rgba(228,95,101,.12)"/><circle cx="110" cy="8" r="3" fill="rgba(101,70,154,.15)"/></svg>
+    <span class="stat-label">Marks per question</span>
+    <strong class="stat-value">{{ exam.positive_marks|signed_mark }}</strong>
+  </div>
 </div>
 
-<section class="section-block">
+<section class="section-block doodle-section">
+  <svg class="section-doodle" viewBox="0 0 800 40" aria-hidden="true" preserveAspectRatio="none">
+    <circle cx="760" cy="12" r="16" fill="rgba(72,165,255,.05)"/>
+    <circle cx="30" cy="30" r="10" fill="rgba(34,164,107,.04)"/>
+    <path d="M700 30l8-14 12 6" fill="none" stroke="rgba(245,166,35,.15)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
   {{ ui.section_header("Question performance", "Skipped answers are included in the percentage") }}
   {% if analysis.questions %}<div class="table-wrap"><table><thead><tr><th>Question</th><th>Attempted</th><th>Correct</th><th>Wrong</th><th>Skipped</th><th>Correct</th><th>Avg time</th><th>Difficulty</th></tr></thead><tbody>
   {% for row in analysis.questions %}<tr><td>Q{{ row.position }}</td><td>{{ row.attempted }}</td><td>{{ row.correct }}</td><td>{{ row.wrong }}</td><td>{{ row.skipped }}</td><td><div class="bar-cell"><span style="width: {{ row.percent_correct }}%"></span><strong>{{ '%.1f'|format(row.percent_correct) }}%</strong></div></td><td>{{ row.average_time|round|int|human_seconds }}</td><td><span class="status-pill difficulty-{{ row.difficulty|lower }}">{{ row.difficulty }}</span></td></tr>{% endfor %}
   </tbody></table></div>{% else %}{{ ui.empty_state("No question data yet", "Results appear after the first submitted attempt.") }}{% endif %}
 </section>
 
-<section class="section-block">
+<section class="section-block doodle-section">
+  <svg class="section-doodle" viewBox="0 0 800 40" aria-hidden="true" preserveAspectRatio="none">
+    <circle cx="750" cy="25" r="14" fill="rgba(101,70,154,.05)"/>
+    <circle cx="40" cy="12" r="8" fill="rgba(72,165,255,.05)"/>
+    <path d="M680 8c6-8 14-2 10 6" fill="none" stroke="rgba(34,164,107,.12)" stroke-width="1.2" stroke-linecap="round"/>
+  </svg>
   {{ ui.section_header("Leaderboard", "Ordered by score, then completion time") }}
   {% if analysis.leaderboard %}<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Percent</th><th>Time</th><th>Attempted</th><th>Wrong</th><th></th></tr></thead><tbody>
   {% for row in analysis.leaderboard %}<tr><td>#{{ row.rank }}</td><td><strong>{{ row.student.full_name }}</strong><small>{{ row.student.username }}</small></td><td>{{ row.score|mark }} / {{ row.max_score|mark }}</td><td>{{ '%.1f'|format(row.percent) }}%</td><td>{{ row.time|human_seconds }}</td><td>{{ row.attempted }}</td><td>{{ row.wrong }}</td><td><a href="/instructor/exams/{{ exam.id }}/attempts/{{ row.attempt_id }}">Open</a></td></tr>{% endfor %}
