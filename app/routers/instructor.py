@@ -141,84 +141,6 @@ def uploaded_exams(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/performance")
-def performance(request: Request, db: Session = Depends(get_db)):
-    user = instructor_user(request, db)
-    now = datetime.now(timezone.utc)
-    exams = list(
-        db.scalars(
-            select(Exam)
-            .where(Exam.created_by_id == user.id)
-            .order_by(Exam.created_at.desc())
-            .options(selectinload(Exam.attempts).selectinload(ExamAttempt.responses))
-        )
-    )
-    performance_rows = []
-    for exam in exams:
-        submitted = [
-            attempt
-            for attempt in exam.attempts
-            if attempt.status != AttemptStatus.IN_PROGRESS
-        ]
-        average_score = (
-            sum((attempt.score or Decimal("0.00") for attempt in submitted), Decimal("0.00"))
-            / len(submitted)
-            if submitted
-            else Decimal("0.00")
-        )
-        average_time = (
-            sum(sum(r.time_spent_seconds for r in attempt.responses) for attempt in submitted) / len(submitted)
-            if submitted
-            else 0.0
-        )
-        performance_rows.append(
-            {
-                "exam": exam,
-                "student_count": len({attempt.student_id for attempt in submitted}),
-                "average_score": average_score,
-                "average_time": average_time,
-                "max_score": exam.total_questions * exam.positive_marks,
-                "status": exam_lifecycle_status(exam, now),
-                "end_at": scheduled_finish(exam),
-            }
-        )
-    return render(
-        request,
-        "instructor/performance.html",
-        {
-            "page_title": "Student performance",
-            "user": user,
-            "performance_rows": performance_rows,
-        },
-    )
-
-
-@router.get("/invigilators")
-def invigilators(request: Request, db: Session = Depends(get_db)):
-    user = instructor_user(request, db)
-    examiners = list(
-        db.scalars(
-            select(User)
-            .where(User.role == UserRole.EXAMINER, User.is_active.is_(True))
-            .order_by(User.full_name)
-            .options(
-                selectinload(User.examiner_assignments).selectinload(
-                    ExaminerAssignment.exam
-                )
-            )
-        )
-    )
-    return render(
-        request,
-        "instructor/invigilators.html",
-        {
-            "page_title": "Invigilators",
-            "user": user,
-            "examiners": examiners,
-        },
-    )
-
-
 @router.get("/exams/new")
 def new_exam_page(request: Request, db: Session = Depends(get_db)):
     user = instructor_user(request, db)
@@ -379,172 +301,6 @@ def exam_detail(exam_id: int, request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/exams/{exam_id}/assign-examiner")
-async def assign_examiner(
-    exam_id: int,
-    request: Request,
-    examiner_id: int = Form(...),
-    csrf_token: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = instructor_user(request, db)
-    validate_csrf(request, csrf_token)
-    exam = owned_exam(db, exam_id, user.id)
-    if exam_lifecycle_status(exam, datetime.now(timezone.utc))["label"] == "Ended":
-        flash(request, "New invigilators cannot be assigned after an exam has ended.", "error")
-        return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
-    examiner = db.scalar(
-        select(User).where(
-            User.id == examiner_id,
-            User.role == UserRole.EXAMINER,
-            User.is_active.is_(True),
-        )
-    )
-    if not examiner:
-        raise HTTPException(status_code=400, detail="Invalid examiner")
-    exists = db.scalar(
-        select(ExaminerAssignment.id).where(
-            ExaminerAssignment.exam_id == exam.id,
-            ExaminerAssignment.examiner_id == examiner.id,
-        )
-    )
-    if not exists:
-        db.add(
-            ExaminerAssignment(
-                exam_id=exam.id, examiner_id=examiner.id, assigned_by_id=user.id
-            )
-        )
-        db.commit()
-    await manager.allow_examiner(exam.id, examiner.id)
-    flash(request, f"{examiner.full_name} is assigned to {exam.name}.", "success")
-    return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
-
-
-@router.post("/exams/{exam_id}/unassign-examiner/{examiner_id}")
-async def unassign_examiner(
-    exam_id: int,
-    examiner_id: int,
-    request: Request,
-    csrf_token: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = instructor_user(request, db)
-    validate_csrf(request, csrf_token)
-    exam = owned_exam(db, exam_id, user.id)
-    assignment = db.scalar(
-        select(ExaminerAssignment)
-        .where(
-            ExaminerAssignment.exam_id == exam.id,
-            ExaminerAssignment.examiner_id == examiner_id,
-        )
-        .options(selectinload(ExaminerAssignment.examiner))
-    )
-    if assignment is None:
-        flash(request, "That invigilator is no longer assigned to this exam.", "error")
-        return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
-
-    examiner_name = assignment.examiner.full_name
-    db.delete(assignment)
-    db.commit()
-    await manager.revoke_examiner(examiner_id, exam.id)
-    flash(request, f"{examiner_name} can no longer monitor {exam.name}.", "success")
-    return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
-
-
-@router.post("/examiners/{examiner_id}/delete")
-async def delete_examiner(
-    examiner_id: int,
-    request: Request,
-    csrf_token: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = instructor_user(request, db)
-    validate_csrf(request, csrf_token)
-    examiner = db.scalar(
-        select(User)
-        .where(User.id == examiner_id, User.role == UserRole.EXAMINER)
-        .options(selectinload(User.examiner_assignments))
-    )
-    if examiner is None:
-        flash(request, "That invigilator account no longer exists.", "error")
-        return RedirectResponse("/instructor/invigilators", status_code=303)
-
-    examiner_name = examiner.full_name
-    db.delete(examiner)
-    db.commit()
-    await manager.revoke_examiner(examiner_id)
-    flash(request, f"{examiner_name}'s invigilator account was deleted.", "success")
-    return RedirectResponse("/instructor/invigilators", status_code=303)
-
-
-@router.post("/exams/{exam_id}/delete")
-async def delete_exam(
-    exam_id: int,
-    request: Request,
-    csrf_token: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = instructor_user(request, db)
-    validate_csrf(request, csrf_token)
-    exam = db.scalar(
-        select(Exam)
-        .where(Exam.id == exam_id, Exam.created_by_id == user.id)
-        .with_for_update()
-    )
-    if exam is None:
-        raise HTTPException(status_code=404)
-
-    attempt_ids = list(
-        db.scalars(select(ExamAttempt.id).where(ExamAttempt.exam_id == exam.id))
-    )
-
-    exam_name = exam.name
-    db.delete(exam)
-    db.commit()
-    await manager.remove_exam(exam_id, attempt_ids)
-    flash(
-        request,
-        f"{exam_name} and all of its exam data were permanently deleted.",
-        "success",
-    )
-    return RedirectResponse("/instructor/exams", status_code=303)
-
-
-@router.post("/examiners/new")
-def create_examiner(
-    request: Request,
-    full_name: str = Form(...),
-    username: str = Form(...),
-    password: str = Form(...),
-    csrf_token: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = instructor_user(request, db)
-    validate_csrf(request, csrf_token)
-    normalized = normalize_username(username)
-    error = validate_password_strength(password)
-    if not full_name.strip() or not normalized or any(c.isspace() for c in normalized):
-        error = "Provide a full name and a username without spaces."
-    if error:
-        flash(request, error, "error")
-        return RedirectResponse("/instructor/invigilators", status_code=303)
-    examiner = User(
-        full_name=full_name.strip(),
-        username=normalized,
-        password_hash=hash_password(password),
-        role=UserRole.EXAMINER,
-    )
-    db.add(examiner)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        flash(request, "That username is already in use.", "error")
-        return RedirectResponse("/instructor/invigilators", status_code=303)
-    flash(request, f"Examiner account created for {examiner.full_name}.", "success")
-    return RedirectResponse("/instructor/invigilators", status_code=303)
-
-
 @router.get("/exams/{exam_id}/analysis")
 def analysis(exam_id: int, request: Request, db: Session = Depends(get_db)):
     user = instructor_user(request, db)
@@ -597,3 +353,247 @@ def attempt_detail(
             "review": attempt_review(attempt, True),
         },
     )
+
+
+@router.post("/exams/{exam_id}/delete")
+def delete_exam(
+    exam_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = instructor_user(request, db)
+    validate_csrf(request, csrf_token)
+    exam = db.scalar(
+        select(Exam)
+        .where(Exam.id == exam_id, Exam.created_by_id == user.id)
+        .with_for_update()
+    )
+    if exam is None:
+        raise HTTPException(status_code=404)
+
+    attempt_ids = list(
+        db.scalars(select(ExamAttempt.id).where(ExamAttempt.exam_id == exam.id))
+    )
+
+    exam_name = exam.name
+    db.delete(exam)
+    db.commit()
+    manager.remove_exam(exam_id, attempt_ids)
+    flash(
+        request,
+        f"{exam_name} and all of its exam data were permanently deleted.",
+        "success",
+    )
+    return RedirectResponse("/instructor/exams", status_code=303)
+
+
+@router.get("/performance")
+def performance(request: Request, db: Session = Depends(get_db)):
+    user = instructor_user(request, db)
+    now = datetime.now(timezone.utc)
+    exams = list(
+        db.scalars(
+            select(Exam)
+            .where(Exam.created_by_id == user.id)
+            .order_by(Exam.created_at.desc())
+            .options(selectinload(Exam.attempts).selectinload(ExamAttempt.responses))
+        )
+    )
+    performance_rows = []
+    for exam in exams:
+        submitted = [
+            attempt
+            for attempt in exam.attempts
+            if attempt.status != AttemptStatus.IN_PROGRESS
+        ]
+        average_score = (
+            sum((attempt.score or Decimal("0.00") for attempt in submitted), Decimal("0.00"))
+            / len(submitted)
+            if submitted
+            else Decimal("0.00")
+        )
+        average_time = (
+            sum(sum(r.time_spent_seconds for r in attempt.responses) for attempt in submitted) / len(submitted)
+            if submitted
+            else 0.0
+        )
+        performance_rows.append(
+            {
+                "exam": exam,
+                "student_count": len({attempt.student_id for attempt in submitted}),
+                "average_score": average_score,
+                "average_time": average_time,
+                "max_score": exam.total_questions * exam.positive_marks,
+                "status": exam_lifecycle_status(exam, now),
+                "end_at": scheduled_finish(exam),
+            }
+        )
+    return render(
+        request,
+        "instructor/performance.html",
+        {
+            "page_title": "Student performance",
+            "user": user,
+            "performance_rows": performance_rows,
+        },
+    )
+
+
+@router.get("/invigilators")
+def invigilators(request: Request, db: Session = Depends(get_db)):
+    user = instructor_user(request, db)
+    examiners = list(
+        db.scalars(
+            select(User)
+            .where(User.role == UserRole.EXAMINER, User.is_active.is_(True))
+            .order_by(User.full_name)
+            .options(
+                selectinload(User.examiner_assignments).selectinload(
+                    ExaminerAssignment.exam
+                )
+            )
+        )
+    )
+    return render(
+        request,
+        "instructor/invigilators.html",
+        {
+            "page_title": "Invigilators",
+            "user": user,
+            "examiners": examiners,
+        },
+    )
+
+
+@router.post("/examiners/new")
+def create_examiner(
+    request: Request,
+    full_name: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    instructor_user(request, db)
+    validate_csrf(request, csrf_token)
+    normalized = normalize_username(username)
+    error = validate_password_strength(password)
+    if not full_name.strip() or not normalized or any(c.isspace() for c in normalized):
+        error = "Provide a full name and a username without spaces."
+    if error:
+        flash(request, error, "error")
+        return RedirectResponse("/instructor/invigilators", status_code=303)
+    examiner = User(
+        full_name=full_name.strip(),
+        username=normalized,
+        password_hash=hash_password(password),
+        role=UserRole.EXAMINER,
+    )
+    db.add(examiner)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        flash(request, "That username is already in use.", "error")
+        return RedirectResponse("/instructor/invigilators", status_code=303)
+    flash(request, f"Examiner account created for {examiner.full_name}.", "success")
+    return RedirectResponse("/instructor/invigilators", status_code=303)
+
+
+@router.post("/examiners/{examiner_id}/delete")
+def delete_examiner(
+    examiner_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    instructor_user(request, db)
+    validate_csrf(request, csrf_token)
+    examiner = db.scalar(
+        select(User)
+        .where(User.id == examiner_id, User.role == UserRole.EXAMINER)
+        .options(selectinload(User.examiner_assignments))
+    )
+    if examiner is None:
+        flash(request, "That invigilator account no longer exists.", "error")
+        return RedirectResponse("/instructor/invigilators", status_code=303)
+
+    examiner_name = examiner.full_name
+    db.delete(examiner)
+    db.commit()
+    manager.revoke_examiner(examiner_id)
+    flash(request, f"{examiner_name}'s invigilator account was deleted.", "success")
+    return RedirectResponse("/instructor/invigilators", status_code=303)
+
+
+@router.post("/exams/{exam_id}/assign-examiner")
+def assign_examiner(
+    exam_id: int,
+    request: Request,
+    examiner_id: int = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = instructor_user(request, db)
+    validate_csrf(request, csrf_token)
+    exam = owned_exam(db, exam_id, user.id)
+    if exam_lifecycle_status(exam, datetime.now(timezone.utc))["label"] == "Ended":
+        flash(request, "New invigilators cannot be assigned after an exam has ended.", "error")
+        return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
+    examiner = db.scalar(
+        select(User).where(
+            User.id == examiner_id,
+            User.role == UserRole.EXAMINER,
+            User.is_active.is_(True),
+        )
+    )
+    if not examiner:
+        raise HTTPException(status_code=400, detail="Invalid examiner")
+    exists = db.scalar(
+        select(ExaminerAssignment.id).where(
+            ExaminerAssignment.exam_id == exam.id,
+            ExaminerAssignment.examiner_id == examiner.id,
+        )
+    )
+    if not exists:
+        db.add(
+            ExaminerAssignment(
+                exam_id=exam.id, examiner_id=examiner.id, assigned_by_id=user.id
+            )
+        )
+        db.commit()
+    manager.allow_examiner(exam.id, examiner.id)
+    flash(request, f"{examiner.full_name} is assigned to {exam.name}.", "success")
+    return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
+
+
+@router.post("/exams/{exam_id}/unassign-examiner/{examiner_id}")
+def unassign_examiner(
+    exam_id: int,
+    examiner_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = instructor_user(request, db)
+    validate_csrf(request, csrf_token)
+    exam = owned_exam(db, exam_id, user.id)
+    assignment = db.scalar(
+        select(ExaminerAssignment)
+        .where(
+            ExaminerAssignment.exam_id == exam.id,
+            ExaminerAssignment.examiner_id == examiner_id,
+        )
+        .options(selectinload(ExaminerAssignment.examiner))
+    )
+    if assignment is None:
+        flash(request, "That invigilator is no longer assigned to this exam.", "error")
+        return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
+
+    examiner_name = assignment.examiner.full_name
+    db.delete(assignment)
+    db.commit()
+    manager.revoke_examiner(examiner_id, exam.id)
+    flash(request, f"{examiner_name} can no longer monitor {exam.name}.", "success")
+    return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)

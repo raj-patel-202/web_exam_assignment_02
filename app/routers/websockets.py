@@ -53,13 +53,13 @@ def event_message(event, attempt: ExamAttempt) -> dict:
 
 
 @router.websocket("/ws/student/attempts/{attempt_id}")
-async def student_socket(websocket: WebSocket, attempt_id: int):
+def student_socket(websocket: WebSocket, attempt_id: int):
     db = SessionLocal()
     attempt: ExamAttempt | None = None
     connected = False
     try:
         if not same_origin(websocket):
-            await websocket.close(code=4403)
+            websocket.close(code=4403)
             return
         user = websocket_user(websocket, db)
         attempt = db.scalar(
@@ -79,22 +79,22 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
             or attempt.status != AttemptStatus.IN_PROGRESS
             or attempt.activated_at is None
         ):
-            await websocket.close(code=4403)
+            websocket.close(code=4403)
             return
 
-        is_reconnect = await manager.connect_student(attempt.id, websocket)
+        is_reconnect = manager.connect_student(attempt.id, websocket)
         connected = True
         if is_reconnect:
             reconnect_event = record_event(db, attempt, "reconnected", {"transport": "websocket"})
             if reconnect_event:
-                await manager.broadcast_exam(attempt.exam_id, event_message(reconnect_event, attempt))
-        await manager.broadcast_exam(
+                manager.broadcast_exam(attempt.exam_id, event_message(reconnect_event, attempt))
+        manager.broadcast_exam(
             attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
         )
-        await websocket.send_json({"type": "connected", "attempt_id": attempt.id})
+        websocket.send_json({"type": "connected", "attempt_id": attempt.id})
 
         while True:
-            message = await websocket.receive_json()
+            message = websocket.receive_json()
             message_type = message.get("type")
             if message_type == "heartbeat":
                 attempt.last_heartbeat_at = datetime.now(timezone.utc)
@@ -104,7 +104,7 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
                         max(position, 0), max(attempt.exam.total_questions - 1, 0)
                     )
                 db.commit()
-                await manager.broadcast_exam(
+                manager.broadcast_exam(
                     attempt.exam_id,
                     {"type": "attempt_update", "attempt": attempt_summary(attempt)},
                 )
@@ -117,10 +117,10 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
                     message.get("occurred_at"),
                 )
                 if event:
-                    await manager.broadcast_exam(
+                    manager.broadcast_exam(
                         attempt.exam_id, event_message(event, attempt)
                     )
-                    await manager.broadcast_exam(
+                    manager.broadcast_exam(
                         attempt.exam_id,
                         {"type": "attempt_update", "attempt": attempt_summary(attempt)},
                     )
@@ -128,7 +128,7 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
         pass
     finally:
         if connected and attempt:
-            was_current_connection = await manager.disconnect_student(attempt.id, websocket)
+            was_current_connection = manager.disconnect_student(attempt.id, websocket)
             if was_current_connection:
                 db.expire_all()
                 current_attempt = db.scalar(
@@ -145,12 +145,12 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
                         db, current_attempt, "disconnected", {"transport": "websocket"}
                     )
                     if event:
-                        await manager.broadcast_exam(
+                        manager.broadcast_exam(
                             current_attempt.exam_id,
                             event_message(event, current_attempt),
                         )
                 if current_attempt:
-                    await manager.broadcast_exam(
+                    manager.broadcast_exam(
                         current_attempt.exam_id,
                         {
                             "type": "attempt_update",
@@ -161,12 +161,12 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
 
 
 @router.websocket("/ws/examiner/exams/{exam_id}")
-async def examiner_socket(websocket: WebSocket, exam_id: int):
+def examiner_socket(websocket: WebSocket, exam_id: int):
     db = SessionLocal()
     connected = False
     try:
         if not same_origin(websocket):
-            await websocket.close(code=4403)
+            websocket.close(code=4403)
             return
         user = websocket_user(websocket, db)
         assignment = None
@@ -178,21 +178,21 @@ async def examiner_socket(websocket: WebSocket, exam_id: int):
                 )
             )
         if not assignment:
-            await websocket.close(code=4403)
+            websocket.close(code=4403)
             return
-        connected = await manager.connect_examiner(exam_id, user.id, websocket)
+        connected = manager.connect_examiner(exam_id, user.id, websocket)
         if not connected:
             return
-        await websocket.send_json({"type": "snapshot", **exam_snapshot(db, exam_id)})
+        websocket.send_json({"type": "snapshot", **exam_snapshot(db, exam_id)})
         while True:
-            message = await websocket.receive_json()
+            message = websocket.receive_json()
             if message.get("type") == "refresh":
-                await websocket.send_json(
+                websocket.send_json(
                     {"type": "snapshot", **exam_snapshot(db, exam_id)}
                 )
     except WebSocketDisconnect:
         pass
     finally:
         if connected:
-            await manager.disconnect_examiner(exam_id, websocket)
+            manager.disconnect_examiner(exam_id, websocket)
         db.close()

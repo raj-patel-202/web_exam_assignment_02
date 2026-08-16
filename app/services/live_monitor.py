@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import threading
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -34,34 +34,34 @@ class ConnectionManager:
         self.examiner_connections: dict[int, dict[WebSocket, int]] = defaultdict(dict)
         self.revoked_examiner_assignments: set[tuple[int, int]] = set()
         self.revoked_examiner_users: set[int] = set()
-        self._lock = asyncio.Lock()
+        self._lock = threading.Lock()
 
-    async def connect_student(self, attempt_id: int, websocket: WebSocket) -> bool:
-        await websocket.accept()
-        async with self._lock:
+    def connect_student(self, attempt_id: int, websocket: WebSocket) -> bool:
+        websocket.accept()
+        with self._lock:
             is_reconnect = attempt_id in self.seen_student_connections
             previous = self.student_connections.get(attempt_id)
             if previous and previous is not websocket:
                 try:
-                    await previous.close(code=4001)
+                    previous.close(code=4001)
                 except RuntimeError:
                     pass
             self.student_connections[attempt_id] = websocket
             self.seen_student_connections.add(attempt_id)
         return is_reconnect
 
-    async def disconnect_student(self, attempt_id: int, websocket: WebSocket) -> bool:
-        async with self._lock:
+    def disconnect_student(self, attempt_id: int, websocket: WebSocket) -> bool:
+        with self._lock:
             if self.student_connections.get(attempt_id) is websocket:
                 self.student_connections.pop(attempt_id, None)
                 return True
         return False
 
-    async def connect_examiner(
+    def connect_examiner(
         self, exam_id: int, examiner_id: int, websocket: WebSocket
     ) -> bool:
-        await websocket.accept()
-        async with self._lock:
+        websocket.accept()
+        with self._lock:
             if (
                 examiner_id in self.revoked_examiner_users
                 or (exam_id, examiner_id) in self.revoked_examiner_assignments
@@ -71,23 +71,23 @@ class ConnectionManager:
                 self.examiner_connections[exam_id][websocket] = examiner_id
                 allowed = True
         if not allowed:
-            await websocket.close(code=4403)
+            websocket.close(code=4403)
         return allowed
 
-    async def disconnect_examiner(self, exam_id: int, websocket: WebSocket) -> None:
-        async with self._lock:
+    def disconnect_examiner(self, exam_id: int, websocket: WebSocket) -> None:
+        with self._lock:
             self.examiner_connections[exam_id].pop(websocket, None)
 
-    async def allow_examiner(self, exam_id: int, examiner_id: int) -> None:
-        async with self._lock:
+    def allow_examiner(self, exam_id: int, examiner_id: int) -> None:
+        with self._lock:
             self.revoked_examiner_users.discard(examiner_id)
             self.revoked_examiner_assignments.discard((exam_id, examiner_id))
 
-    async def revoke_examiner(
+    def revoke_examiner(
         self, examiner_id: int, exam_id: int | None = None
     ) -> None:
         sockets: list[WebSocket] = []
-        async with self._lock:
+        with self._lock:
             if exam_id is None:
                 self.revoked_examiner_users.add(examiner_id)
                 for connections in self.examiner_connections.values():
@@ -110,14 +110,14 @@ class ConnectionManager:
                     connections.pop(websocket, None)
         for websocket in sockets:
             try:
-                await websocket.close(code=4403, reason="Invigilator access revoked")
+                websocket.close(code=4403, reason="Invigilator access revoked")
             except RuntimeError:
                 pass
 
-    async def remove_exam(self, exam_id: int, attempt_ids: list[int]) -> None:
+    def remove_exam(self, exam_id: int, attempt_ids: list[int]) -> None:
         """Close and forget all live connections belonging to a deleted exam."""
         sockets: list[WebSocket] = []
-        async with self._lock:
+        with self._lock:
             sockets.extend(self.examiner_connections.pop(exam_id, {}).keys())
             for attempt_id in attempt_ids:
                 student_socket = self.student_connections.pop(attempt_id, None)
@@ -131,22 +131,22 @@ class ConnectionManager:
             }
         for websocket in sockets:
             try:
-                await websocket.close(code=4404, reason="Exam deleted")
+                websocket.close(code=4404, reason="Exam deleted")
             except RuntimeError:
                 pass
 
     def is_online(self, attempt_id: int) -> bool:
         return attempt_id in self.student_connections
 
-    async def broadcast_exam(self, exam_id: int, payload: dict[str, Any]) -> None:
+    def broadcast_exam(self, exam_id: int, payload: dict[str, Any]) -> None:
         stale: list[WebSocket] = []
         for websocket in list(self.examiner_connections.get(exam_id, {})):
             try:
-                await websocket.send_json(payload)
+                websocket.send_json(payload)
             except RuntimeError:
                 stale.append(websocket)
         for websocket in stale:
-            await self.disconnect_examiner(exam_id, websocket)
+            self.disconnect_examiner(exam_id, websocket)
 
 
 manager = ConnectionManager()

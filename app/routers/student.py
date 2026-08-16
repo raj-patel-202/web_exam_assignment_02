@@ -137,37 +137,6 @@ def exams(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/results")
-def results(request: Request, db: Session = Depends(get_db)):
-    user = student_user(request, db)
-    attempts = list(
-        db.scalars(
-            select(ExamAttempt)
-            .join(Exam)
-            .where(
-                ExamAttempt.student_id == user.id,
-                ExamAttempt.status != AttemptStatus.IN_PROGRESS,
-                Exam.exam_type == ExamType.SCHEDULED,
-            )
-            .order_by(ExamAttempt.submitted_at.desc())
-            .options(selectinload(ExamAttempt.exam))
-        )
-    )
-    result_rows = [
-        {"attempt": attempt, "reveal_answers": can_review_attempt(attempt)}
-        for attempt in attempts
-    ]
-    return render(
-        request,
-        "student/results.html",
-        {
-            "page_title": "Results",
-            "user": user,
-            "result_rows": result_rows,
-        },
-    )
-
-
 @router.post("/exams/{exam_id}/start")
 def start_exam(
     exam_id: int,
@@ -229,7 +198,7 @@ def take_exam(attempt_id: int, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/attempts/{attempt_id}/activate")
-async def activate(
+def activate(
     attempt_id: int,
     request: Request,
     x_csrf_token: str | None = Header(default=None),
@@ -244,7 +213,7 @@ async def activate(
         attempt = activate_attempt(db, attempt)
     except AttemptRuleError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
-    await manager.broadcast_exam(
+    manager.broadcast_exam(
         attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
     )
     return {
@@ -255,7 +224,7 @@ async def activate(
 
 
 @router.post("/attempts/{attempt_id}/save")
-async def autosave(
+def autosave(
     attempt_id: int,
     payload: SaveResponsePayload,
     request: Request,
@@ -271,14 +240,14 @@ async def autosave(
         save_response(db, attempt, **payload.model_dump())
     except AttemptRuleError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
-    await manager.broadcast_exam(
+    manager.broadcast_exam(
         attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
     )
     return {"ok": True, "saved_at": datetime.now(timezone.utc).isoformat()}
 
 
 @router.post("/attempts/{attempt_id}/submit")
-async def submit(
+def submit(
     attempt_id: int,
     request: Request,
     x_csrf_token: str | None = Header(default=None),
@@ -293,10 +262,41 @@ async def submit(
         submit_attempt(db, attempt)
     except AttemptRuleError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
-    await manager.broadcast_exam(
+    manager.broadcast_exam(
         attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
     )
     return {"ok": True, "redirect_url": f"/student/attempts/{attempt.id}/result"}
+
+
+@router.get("/results")
+def results(request: Request, db: Session = Depends(get_db)):
+    user = student_user(request, db)
+    attempts = list(
+        db.scalars(
+            select(ExamAttempt)
+            .join(Exam)
+            .where(
+                ExamAttempt.student_id == user.id,
+                ExamAttempt.status != AttemptStatus.IN_PROGRESS,
+                Exam.exam_type == ExamType.SCHEDULED,
+            )
+            .order_by(ExamAttempt.submitted_at.desc())
+            .options(selectinload(ExamAttempt.exam))
+        )
+    )
+    result_rows = [
+        {"attempt": attempt, "reveal_answers": can_review_attempt(attempt)}
+        for attempt in attempts
+    ]
+    return render(
+        request,
+        "student/results.html",
+        {
+            "page_title": "Results",
+            "user": user,
+            "result_rows": result_rows,
+        },
+    )
 
 
 @router.get("/attempts/{attempt_id}/result")

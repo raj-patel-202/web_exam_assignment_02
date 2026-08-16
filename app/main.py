@@ -1,15 +1,26 @@
 from __future__ import annotations
 
+import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text
 
 from app.config import get_settings
-from app.security import ensure_csrf_token
+from app.database import SessionLocal, initialize_database
+from app.routers import auth, examiner, instructor, student, websockets
+from app.security import current_user_from_request, ensure_csrf_token, role_home
+from app.services.exam_service import (
+    auto_end_scheduled_exams,
+    auto_submit_expired_attempts,
+)
 
 settings = get_settings()
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -83,34 +94,15 @@ def render(request: Request, name: str, context: dict | None = None, status_code
         status_code=status_code,
     )
 
-import asyncio
-from contextlib import asynccontextmanager, suppress
-from pathlib import Path
-
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
-from starlette.middleware.sessions import SessionMiddleware
-
-from app.config import get_settings
-from app.database import SessionLocal, initialize_database
-from app.routers import auth, examiner, instructor, student, websockets
-from app.security import current_user_from_request, role_home
-from app.services.exam_service import (
-    auto_end_scheduled_exams,
-    auto_submit_expired_attempts,
-)
-
-
-async def expiry_worker() -> None:
+def expiry_worker() -> None:
+    import time
     while True:
         try:
-            await asyncio.to_thread(expire_once)
+            expire_once()
         except Exception:
             # The next cycle retries; request handling remains available.
             pass
-        await asyncio.sleep(10)
+        time.sleep(10)
 
 
 def expire_once() -> None:
@@ -119,25 +111,15 @@ def expire_once() -> None:
         auto_submit_expired_attempts(db)
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    await asyncio.to_thread(initialize_database, SessionLocal)
-    worker = asyncio.create_task(expiry_worker())
+@contextmanager
+def lifespan(_: FastAPI):
+    initialize_database(SessionLocal)
+    worker = threading.Thread(target=expiry_worker, daemon=True)
+    worker.start()
     yield
-    worker.cancel()
-    with suppress(asyncio.CancelledError):
-        await worker
 
 
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=settings.secret_key,
-    session_cookie=settings.session_cookie_name,
-    max_age=settings.session_max_age_seconds,
-    same_site="lax",
-    https_only=settings.session_https_only,
-)
 app.mount(
     "/static",
     StaticFiles(directory=str(Path(__file__).parent / "static")),
@@ -170,7 +152,7 @@ def health():
 
 
 @app.exception_handler(HTTPException)
-async def http_error(request: Request, exc: HTTPException):
+def http_error(request: Request, exc: HTTPException):
     if exc.status_code == 401:
         return RedirectResponse("/auth/login", status_code=303)
     if exc.status_code == 403:
