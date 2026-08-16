@@ -17,6 +17,7 @@ services:
 
   app:
     build: .
+    env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://exam_user:exam_password@db:5432/exam_system
       SECRET_KEY: ${SECRET_KEY:-change-this-compose-secret-before-production}
