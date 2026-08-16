@@ -12,7 +12,6 @@ from app.config import get_settings
 from app.security import ensure_csrf_token
 
 import threading
-from contextlib import contextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
