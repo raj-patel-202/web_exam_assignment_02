@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from statistics import median
 from decimal import Decimal
+from statistics import median
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import AttemptStatus, Exam, ExamAttempt, Question, Response
-
 
 FINAL_STATUSES = (AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED)
 

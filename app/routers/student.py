@@ -7,18 +7,16 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.dependencies import current_user_from_request, require_role
+from app.main import render
 from app.models import (
     AttemptStatus,
     Exam,
     ExamAttempt,
     ExamStatus,
     ExamType,
-    Question,
-    Response,
     UserRole,
 )
-from app.security import validate_csrf
+from app.security import current_user_from_request, require_role, validate_csrf
 from app.services.analytics import attempt_review, exam_analysis
 from app.services.exam_service import (
     AttemptRuleError,
@@ -34,8 +32,6 @@ from app.services.exam_service import (
     submit_attempt,
 )
 from app.services.live_monitor import attempt_summary, manager
-from app.web import flash, render
-
 
 router = APIRouter(prefix="/student", tags=["student"])
 

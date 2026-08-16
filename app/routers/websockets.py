@@ -10,7 +10,6 @@ from app.models import (
     AttemptStatus,
     ExamAttempt,
     ExaminerAssignment,
-    Response,
     User,
     UserRole,
 )
@@ -20,7 +19,6 @@ from app.services.live_monitor import (
     manager,
     record_event,
 )
-
 
 router = APIRouter(tags=["live monitoring"])
 

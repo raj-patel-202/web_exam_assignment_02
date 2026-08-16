@@ -6,17 +6,17 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.dependencies import current_user_from_request, role_home
+from app.main import flash, render
 from app.models import User, UserRole
 from app.security import (
+    current_user_from_request,
     hash_password,
     normalize_username,
+    role_home,
     validate_csrf,
     validate_password_strength,
     verify_password,
 )
-from app.web import flash, render
-
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 settings = get_settings()

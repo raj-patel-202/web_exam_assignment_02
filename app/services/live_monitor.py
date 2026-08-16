@@ -9,9 +9,8 @@ from fastapi import WebSocket
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import AttemptStatus, ExamAttempt, ProctorEvent
 from app.config import get_settings
-
+from app.models import ExamAttempt, ProctorEvent
 
 EVENT_SEVERITY = {
     "tab_hidden": 2,

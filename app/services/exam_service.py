@@ -10,8 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import (
-    AuditLog,
     AttemptStatus,
+    AuditLog,
     Exam,
     ExamAttempt,
     ExamStatus,

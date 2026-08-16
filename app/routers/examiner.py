@@ -5,8 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.dependencies import current_user_from_request, require_role
+from app.main import render
 from app.models import Exam, ExaminerAssignment, UserRole
+from app.security import current_user_from_request, require_role
 from app.services.exam_service import (
     aware_utc,
     exam_lifecycle_status,
@@ -14,8 +15,6 @@ from app.services.exam_service import (
     scheduled_finish,
 )
 from app.services.live_monitor import exam_snapshot
-from app.web import render
-
 
 router = APIRouter(prefix="/examiner", tags=["examiner"])
 

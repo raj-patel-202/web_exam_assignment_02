@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -11,22 +11,24 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
 from app.database import get_db
-from app.dependencies import current_user_from_request, require_role
+from app.main import flash, render
 from app.models import (
+    AttemptStatus,
     AuditLog,
     Exam,
     ExamAttempt,
     ExaminerAssignment,
     ExamType,
-    AttemptStatus,
     Question,
     Response,
     User,
     UserRole,
 )
 from app.security import (
+    current_user_from_request,
     hash_password,
     normalize_username,
+    require_role,
     validate_csrf,
     validate_password_strength,
 )
@@ -40,8 +42,6 @@ from app.services.exam_service import (
     scheduled_finish,
 )
 from app.services.live_monitor import manager
-from app.web import flash, render
-
 
 router = APIRouter(prefix="/instructor", tags=["instructor"])
 settings = get_settings()
@@ -278,9 +278,9 @@ async def new_exam(
         error = "Duration must be between 1 and 720 minutes."
     elif join_grace_minutes < 0 or join_grace_minutes > 120:
         error = "Joining grace period must be between 0 and 120 minutes."
-    elif quantized_positive is None or quantized_positive <= 0 or quantized_positive > Decimal("1000"):
+    elif quantized_positive is None or quantized_positive <= 0 or quantized_positive > Decimal(1000):
         error = "Positive marks must be greater than 0 and no more than 1000."
-    elif quantized_negative is None or quantized_negative > 0 or quantized_negative < Decimal("-1000"):
+    elif quantized_negative is None or quantized_negative > 0 or quantized_negative < Decimal(-1000):
         error = "Negative marks must be between -1000 and 0."
     elif Path(exam_file.filename or "").suffix.lower() != ".txt":
         error = "Upload a .txt exam file."
