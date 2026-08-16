@@ -1,22 +1,30 @@
 from __future__ import annotations
 
-import threading
-from contextlib import contextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Request
+from fastapi.templating import Jinja2Templates
+
+from app.config import get_settings
+from app.security import ensure_csrf_token
+
+import threading
+from contextlib import contextmanager, suppress
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.database import SessionLocal, initialize_database
-from app.routers import auth, examiner, instructor, student, websockets
-from app.security import current_user_from_request, ensure_csrf_token, role_home
+
+from app.security import current_user_from_request, role_home
 from app.services.exam_service import (
     auto_end_scheduled_exams,
     auto_submit_expired_attempts,
@@ -94,6 +102,7 @@ def render(request: Request, name: str, context: dict | None = None, status_code
         status_code=status_code,
     )
 
+
 def expiry_worker() -> None:
     import time
     while True:
@@ -111,20 +120,30 @@ def expire_once() -> None:
         auto_submit_expired_attempts(db)
 
 
-@contextmanager
-def lifespan(_: FastAPI):
+
+
+
+app = FastAPI(title=settings.app_name, debug=settings.debug)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    session_cookie=settings.session_cookie_name,
+    max_age=settings.session_max_age_seconds,
+    same_site="lax",
+    https_only=settings.session_https_only,
+)
+
+@app.on_event("startup")
+def on_startup():
     initialize_database(SessionLocal)
     worker = threading.Thread(target=expiry_worker, daemon=True)
     worker.start()
-    yield
-
-
-app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.mount(
     "/static",
     StaticFiles(directory=str(Path(__file__).parent / "static")),
     name="static",
 )
+from app.routers import auth, examiner, instructor, student, websockets  # noqa: E402
 app.include_router(auth.router)
 app.include_router(student.router)
 app.include_router(instructor.router)
