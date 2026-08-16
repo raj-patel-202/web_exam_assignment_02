@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import math
 import random
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import (
+    AuditLog,
     AttemptStatus,
     Exam,
     ExamAttempt,
@@ -92,12 +94,62 @@ def scheduled_end(exam: Exam) -> datetime | None:
     )
 
 
+def scheduled_finish(exam: Exam) -> datetime | None:
+    """Return start time plus joining grace and the full exam duration."""
+    return scheduled_end(exam)
+
+
+def exam_lifecycle_status(
+    exam: Exam, now: datetime | None = None
+) -> dict[str, str]:
+    """Return the display status for an exam at the requested time."""
+    now = aware_utc(now) or datetime.now(timezone.utc)
+    if exam.status == ExamStatus.ARCHIVED:
+        return {"label": "Ended", "tone": "danger"}
+    finish_at = scheduled_finish(exam)
+    if finish_at is not None and now >= finish_at:
+        return {"label": "Ended", "tone": "danger"}
+    start_at = aware_utc(exam.start_at)
+    if start_at is not None and now >= start_at:
+        return {"label": "Running", "tone": "success"}
+    return {"label": "Published", "tone": "warning"}
+
+
+def exam_time_status(exam: Exam, now: datetime | None = None) -> str:
+    """Return a compact schedule countdown for instructor views."""
+    now = aware_utc(now) or datetime.now(timezone.utc)
+    status = exam_lifecycle_status(exam, now)
+    if status["label"] == "Ended":
+        return "Finished"
+    start_at = aware_utc(exam.start_at)
+    end_at = scheduled_finish(exam)
+    target = start_at if start_at is not None and now < start_at else end_at
+    if target is None:
+        return "Time unavailable"
+    total_minutes = max(1, math.ceil((target - now).total_seconds() / 60))
+    days, remaining_minutes = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(remaining_minutes, 60)
+    parts = []
+    if days:
+        parts.append(f"{days} {'day' if days == 1 else 'days'}")
+    if hours:
+        parts.append(f"{hours} hr")
+    if minutes or not parts:
+        parts.append(f"{minutes} min")
+    value = " ".join(parts)
+    if start_at is not None and now < start_at:
+        return f"Starts in · {value}"
+    return f"Ends in · {value}"
+
+
 def exam_availability(
     exam: Exam,
     attempts: list[ExamAttempt],
     now: datetime | None = None,
 ) -> dict[str, object]:
     now = aware_utc(now) or datetime.now(timezone.utc)
+    if exam.exam_type != ExamType.SCHEDULED:
+        return {"state": "closed", "label": "Not available"}
     active = next((a for a in attempts if a.status == AttemptStatus.IN_PROGRESS), None)
     if active:
         if active.expires_at is None or now < aware_utc(active.expires_at):
@@ -106,9 +158,6 @@ def exam_availability(
 
     if exam.status != ExamStatus.PUBLISHED:
         return {"state": "closed", "label": "Not available"}
-    if exam.exam_type == ExamType.PRACTICE:
-        return {"state": "available", "label": "Start practice"}
-
     if attempts:
         return {"state": "completed", "label": "Already attempted"}
     start_at = aware_utc(exam.start_at)
@@ -116,6 +165,9 @@ def exam_availability(
         return {"state": "closed", "label": "Schedule unavailable"}
     if now < start_at:
         return {"state": "upcoming", "label": "Not started"}
+    finish_at = scheduled_finish(exam)
+    if finish_at and now >= finish_at:
+        return {"state": "closed", "label": "Exam ended"}
     if now > start_at + timedelta(minutes=exam.join_grace_minutes):
         return {"state": "closed", "label": "Joining window closed"}
     return {"state": "available", "label": "Start scheduled exam"}
@@ -166,7 +218,7 @@ def create_or_resume_attempt(
         rng.shuffle(option_ids)
         option_orders[str(question.id)] = option_ids
 
-    attempt_number = 1 if exam.exam_type == ExamType.SCHEDULED else len(previous) + 1
+    attempt_number = 1
     attempt = ExamAttempt(
         exam_id=exam.id,
         student_id=student.id,
@@ -227,13 +279,14 @@ def activate_attempt(
     if attempt.activated_at is not None and attempt.expires_at is not None:
         return attempt
 
-    if attempt.exam.exam_type == ExamType.SCHEDULED:
-        start_at = aware_utc(attempt.exam.start_at)
-        if start_at is None or now < start_at:
-            raise AttemptRuleError("This scheduled exam has not started yet.")
-        if now > start_at + timedelta(minutes=attempt.exam.join_grace_minutes):
-            submit_attempt(db, attempt, auto=True, now=now)
-            raise AttemptRuleError("The joining window closed before the exam was started.")
+    if attempt.exam.exam_type != ExamType.SCHEDULED:
+        raise AttemptRuleError("This exam is not available.")
+    start_at = aware_utc(attempt.exam.start_at)
+    if start_at is None or now < start_at:
+        raise AttemptRuleError("This scheduled exam has not started yet.")
+    if now > start_at + timedelta(minutes=attempt.exam.join_grace_minutes):
+        submit_attempt(db, attempt, auto=True, now=now)
+        raise AttemptRuleError("The joining window closed before the exam was started.")
 
     attempt.started_at = now
     attempt.activated_at = now
@@ -403,17 +456,46 @@ def auto_submit_expired_attempts(db: Session, now: datetime | None = None) -> in
     return len(attempts)
 
 
-def can_review_attempt(attempt: ExamAttempt, now: datetime | None = None) -> bool:
-    if attempt.exam.exam_type == ExamType.PRACTICE:
-        return True
-    end_at = scheduled_end(attempt.exam)
-    return bool(end_at and (aware_utc(now) or datetime.now(timezone.utc)) >= end_at)
-
-
-def next_practice_attempt_number(db: Session, exam_id: int, student_id: int) -> int:
-    value = db.scalar(
-        select(func.max(ExamAttempt.attempt_number)).where(
-            ExamAttempt.exam_id == exam_id, ExamAttempt.student_id == student_id
+def auto_end_scheduled_exams(db: Session, now: datetime | None = None) -> int:
+    """Close scheduled exams after joining grace plus their configured duration."""
+    now = aware_utc(now) or datetime.now(timezone.utc)
+    exams = list(
+        db.scalars(
+            select(Exam)
+            .where(
+                Exam.status == ExamStatus.PUBLISHED,
+                Exam.exam_type == ExamType.SCHEDULED,
+                Exam.start_at.is_not(None),
+                Exam.start_at <= now,
+            )
+            .with_for_update()
         )
     )
-    return int(value or 0) + 1
+    ended = []
+    for exam in exams:
+        finish_at = scheduled_finish(exam)
+        if finish_at is None or finish_at > now:
+            continue
+        exam.status = ExamStatus.ARCHIVED
+        ended.append((exam, finish_at))
+
+    for exam, finish_at in ended:
+        db.add(
+            AuditLog(
+                actor_id=None,
+                action="auto_end_exam",
+                entity_type="exam",
+                entity_id=exam.id,
+                details={
+                    "scheduled_finish_at": finish_at.isoformat(),
+                },
+            )
+        )
+    if ended:
+        db.commit()
+    return len(ended)
+
+
+def can_review_attempt(attempt: ExamAttempt, now: datetime | None = None) -> bool:
+    end_at = scheduled_end(attempt.exam)
+    return bool(end_at and (aware_utc(now) or datetime.now(timezone.utc)) >= end_at)

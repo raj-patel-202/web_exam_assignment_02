@@ -10,22 +10,38 @@
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
+  {% set current_path = request.url.path %}
+  {% if user and user.role.value == 'student' %}
+    {% set brand_home = '/student' %}
+  {% elif user and user.role.value == 'instructor' %}
+    {% set brand_home = '/instructor' %}
+  {% elif user and user.role.value == 'examiner' %}
+    {% set brand_home = '/examiner' %}
+  {% else %}
+    {% set brand_home = '/' %}
+  {% endif %}
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="/" aria-label="Exam Sentinel home">
+      <a class="brand" href="{{ brand_home }}" aria-label="Exam Sentinel home">
         <span class="brand-mark" aria-hidden="true">E</span>
         <strong>Exam Sentinel</strong>
       </a>
       <nav class="main-nav" aria-label="Primary navigation">
         {% if user %}
           {% if user.role.value == 'student' %}
-            <a href="/student">Overview</a>
-            <a href="/student/exams">Exams</a>
+            {% set student_exam_page = current_path.startswith('/student/exams') or (current_path.startswith('/student/attempts') and not current_path.endswith('/result')) %}
+            {% set student_result_page = current_path.startswith('/student/results') or current_path.endswith('/result') %}
+            <a href="/student/exams" class="{% if student_exam_page %}active{% endif %}" {% if student_exam_page %}aria-current="page"{% endif %}>Exams</a>
+            <a href="/student/results" class="{% if student_result_page %}active{% endif %}" {% if student_result_page %}aria-current="page"{% endif %}>Results</a>
           {% elif user.role.value == 'instructor' %}
-            <a href="/instructor">My exams</a>
-            <a href="/instructor/exams/new">Create exam</a>
+            {% set instructor_exam_page = current_path == '/instructor/exams' or (current_path.startswith('/instructor/exams/') and current_path != '/instructor/exams/new' and '/analysis' not in current_path and '/attempts/' not in current_path) %}
+            {% set instructor_performance_page = current_path.startswith('/instructor/performance') or '/analysis' in current_path or '/attempts/' in current_path %}
+            <a href="/instructor/exams/new" class="{% if current_path == '/instructor/exams/new' %}active{% endif %}" {% if current_path == '/instructor/exams/new' %}aria-current="page"{% endif %}>Create exam</a>
+            <a href="/instructor/exams" class="{% if instructor_exam_page %}active{% endif %}" {% if instructor_exam_page %}aria-current="page"{% endif %}>Uploaded exams</a>
+            <a href="/instructor/performance" class="{% if instructor_performance_page %}active{% endif %}" {% if instructor_performance_page %}aria-current="page"{% endif %}>Student performance</a>
+            <a href="/instructor/invigilators" class="{% if current_path == '/instructor/invigilators' %}active{% endif %}" {% if current_path == '/instructor/invigilators' %}aria-current="page"{% endif %}>Invigilators</a>
           {% elif user.role.value == 'examiner' %}
-            <a href="/examiner">Monitoring</a>
+            <a href="/examiner" class="{% if current_path.startswith('/examiner') %}active{% endif %}" {% if current_path.startswith('/examiner') %}aria-current="page"{% endif %}>Monitoring</a>
           {% endif %}
         {% else %}
           <a href="/auth/login">Sign in</a>
@@ -54,10 +70,9 @@
   {% endif %}
 
   <div class="message-modal" id="app-message-modal" data-kind="{{ initial_message_kind or 'info' }}" {% if not initial_message %}hidden{% endif %}>
-    <button class="message-modal-backdrop" type="button" data-message-close aria-label="Close message"></button>
-    <section class="message-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="app-message-title" aria-describedby="app-message-text">
+    <section class="message-modal-dialog" role="status" aria-live="polite" aria-labelledby="app-message-title" aria-describedby="app-message-text">
       <div class="message-modal-icon" id="app-message-icon" aria-hidden="true">i</div>
-      <div class="message-modal-copy"><h2 id="app-message-title">Notice</h2><p id="app-message-text" aria-live="assertive">{{ initial_message or '' }}</p></div>
+      <div class="message-modal-copy"><h2 id="app-message-title">Notice</h2><p id="app-message-text">{{ initial_message or '' }}</p></div>
       <button class="message-modal-close" type="button" data-message-close aria-label="Close message">×</button>
       <div class="message-modal-progress" id="app-message-progress" aria-hidden="true"><span></span></div>
     </section>
@@ -69,11 +84,8 @@
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <div><a class="footer-brand" href="/">Exam Sentinel</a><p>Simple tools for running and reviewing exams.</p></div>
-      <nav aria-label="Footer navigation">
-        {% if user %}<a href="/">Dashboard</a>{% else %}<a href="/auth/login">Sign in</a><a href="/auth/register">Create account</a>{% endif %}
-        <span>FastAPI + PostgreSQL</span>
-      </nav>
+      <span>© 2026 Exam Sentinel. All rights reserved.</span>
+      <span>Made with love and care.</span>
     </div>
   </footer>
   <script src="{{ url_for('static', path='js/app.js') }}" defer></script>

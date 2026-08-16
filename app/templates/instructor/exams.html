@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import "templates.html" as ui %}
+{% block content %}
+{{ ui.page_header("Uploaded exams", back_href="/instructor", back_label="Home") }}
+
+<div class="card-grid card-grid-wide">
+{% for row in exam_rows %}
+  {% set exam = row.exam %}
+  <article class="exam-card uploaded-exam-card">
+    <div class="card-kicker">{{ ui.badge(row.status.label, row.status.tone) }}<span class="exam-fact-pill fact-questions">{{ exam.total_questions }} questions</span></div>
+    <h2>{{ exam.name }}</h2>
+    <dl class="uploaded-exam-facts">
+      <div><dt>Created</dt><dd class="exam-fact-pill fact-created">{{ exam.created_at|local_datetime }}</dd></div>
+      <div><dt>Starts</dt><dd class="exam-fact-pill fact-starts">{{ exam.start_at|local_datetime }}</dd></div>
+      <div><dt>Ends</dt><dd class="exam-fact-pill fact-ends">{{ row.end_at|local_datetime }}</dd></div>
+      <div><dt>Students attempted</dt><dd class="exam-fact-pill fact-students">{{ row.student_count }}</dd></div>
+    </dl>
+    <a class="button button-secondary button-full" href="/instructor/exams/{{ exam.id }}">Manage exam</a>
+  </article>
+{% else %}
+  <div class="full-span">{{ ui.empty_state("No uploaded exams", "Create your first exam from a TXT question paper.", "/instructor/exams/new", "Create exam") }}</div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,4 +1,6 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -21,9 +23,9 @@ def test_proctor_event_is_persisted_and_counted(db):
     instructor, student = make_users(db)
     exam = create_exam(
         db,
-        name="Monitored practice",
-        exam_type=ExamType.PRACTICE,
-        start_at=None,
+        name="Monitored scheduled exam",
+        exam_type=ExamType.SCHEDULED,
+        start_at=datetime.now(timezone.utc) - timedelta(minutes=1),
         duration_minutes=20,
         join_grace_minutes=5,
         source_filename="exam.txt",
@@ -74,3 +76,53 @@ def test_invigilator_revocation_closes_only_the_target_connection():
         assert await connection_manager.connect_examiner(8, 21, restored)
 
     asyncio.run(scenario())
+
+
+def test_student_connection_marks_only_a_real_reconnect():
+    class FakeSocket:
+        def __init__(self):
+            self.accepted = False
+            self.closed_code = None
+
+        async def accept(self):
+            self.accepted = True
+
+        async def close(self, code=1000, reason=None):
+            self.closed_code = code
+
+    async def scenario():
+        connection_manager = ConnectionManager()
+        first = FakeSocket()
+        replacement = FakeSocket()
+
+        assert await connection_manager.connect_student(5, first) is False
+        assert await connection_manager.connect_student(5, replacement) is True
+        assert first.closed_code == 4001
+        assert await connection_manager.disconnect_student(5, first) is False
+        assert await connection_manager.disconnect_student(5, replacement) is True
+
+    asyncio.run(scenario())
+
+
+def test_browser_proctoring_uses_in_page_confirmation_and_coalesces_incidents():
+    script = (Path(__file__).parents[1] / "app" / "static" / "js" / "exam.js").read_text(
+        encoding="utf-8"
+    )
+    template = (
+        Path(__file__).parents[1] / "app" / "templates" / "student" / "take_exam.html"
+    ).read_text(encoding="utf-8")
+
+    assert "let proctoringEnabled = false;" in script
+    assert "let proctoringSuppressed = false;" in script
+    assert "let pendingIncident = null;" in script
+    assert "const incidentPriority" in script
+    assert "queueProctorIncident(\"fullscreen_exit\")" in script
+    assert "!proctoringEnabled || proctoringSuppressed" in script
+    assert "window.confirm(" not in script
+    assert 'proctorEvent("window_focus")' not in script
+    assert 'proctorEvent("tab_visible")' not in script
+    assert 'navigationEntry?.type === "reload" && examStarted' in script
+    assert 'id="exam-submit-confirm"' in template
+    assert 'aria-modal="true"' in template
+    assert 'id="cancel-exam-submit"' in template
+    assert 'id="confirm-exam-submit"' in template

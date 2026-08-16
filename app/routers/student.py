@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -13,6 +13,7 @@ from app.models import (
     Exam,
     ExamAttempt,
     ExamStatus,
+    ExamType,
     Question,
     Response,
     UserRole,
@@ -27,6 +28,7 @@ from app.services.exam_service import (
     can_review_attempt,
     create_or_resume_attempt,
     exam_availability,
+    exam_time_status,
     get_attempt_for_student,
     save_response,
     submit_attempt,
@@ -52,25 +54,44 @@ def student_user(request: Request, db: Session):
 @router.get("")
 def dashboard(request: Request, db: Session = Depends(get_db)):
     user = student_user(request, db)
-    attempts = list(
-        db.scalars(
-            select(ExamAttempt)
-            .where(ExamAttempt.student_id == user.id)
-            .order_by(ExamAttempt.started_at.desc())
-            .limit(8)
-            .options(selectinload(ExamAttempt.exam))
+    active_attempt_count = int(
+        db.scalar(
+            select(func.count(ExamAttempt.id)).join(Exam).where(
+                ExamAttempt.student_id == user.id,
+                ExamAttempt.status == AttemptStatus.IN_PROGRESS,
+                Exam.exam_type == ExamType.SCHEDULED,
+            )
         )
+        or 0
     )
-    active = [attempt for attempt in attempts if attempt.status == AttemptStatus.IN_PROGRESS]
-    completed = [attempt for attempt in attempts if attempt.status != AttemptStatus.IN_PROGRESS]
+    result_count = int(
+        db.scalar(
+            select(func.count(ExamAttempt.id)).join(Exam).where(
+                ExamAttempt.student_id == user.id,
+                ExamAttempt.status != AttemptStatus.IN_PROGRESS,
+                Exam.exam_type == ExamType.SCHEDULED,
+            )
+        )
+        or 0
+    )
+    available_exam_count = int(
+        db.scalar(
+            select(func.count(Exam.id)).where(
+                Exam.status == ExamStatus.PUBLISHED,
+                Exam.exam_type == ExamType.SCHEDULED,
+            )
+        )
+        or 0
+    )
     return render(
         request,
         "student/dashboard.html",
         {
             "page_title": "Student dashboard",
             "user": user,
-            "active_attempts": active,
-            "recent_attempts": completed,
+            "active_attempt_count": active_attempt_count,
+            "result_count": result_count,
+            "available_exam_count": available_exam_count,
         },
     )
 
@@ -78,16 +99,27 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 @router.get("/exams")
 def exams(request: Request, db: Session = Depends(get_db)):
     user = student_user(request, db)
+    attempts = list(
+        db.scalars(select(ExamAttempt).where(ExamAttempt.student_id == user.id))
+    )
+    active_exam_ids = {
+        attempt.exam_id
+        for attempt in attempts
+        if attempt.status == AttemptStatus.IN_PROGRESS
+    }
     exam_rows = list(
         db.scalars(
             select(Exam)
-            .where(Exam.status == ExamStatus.PUBLISHED)
+            .where(
+                Exam.exam_type == ExamType.SCHEDULED,
+                or_(
+                    Exam.status == ExamStatus.PUBLISHED,
+                    Exam.id.in_(active_exam_ids),
+                )
+            )
             .order_by(Exam.start_at.asc().nullsfirst(), Exam.created_at.desc())
             .options(selectinload(Exam.creator))
         )
-    )
-    attempts = list(
-        db.scalars(select(ExamAttempt).where(ExamAttempt.student_id == user.id))
     )
     by_exam: dict[int, list[ExamAttempt]] = {}
     for attempt in attempts:
@@ -97,6 +129,8 @@ def exams(request: Request, db: Session = Depends(get_db)):
             "exam": exam,
             "availability": exam_availability(exam, by_exam.get(exam.id, [])),
             "attempt_count": len(by_exam.get(exam.id, [])),
+            "start_at_iso": aware_utc(exam.start_at).isoformat() if exam.start_at else "",
+            "start_countdown": exam_time_status(exam),
         }
         for exam in exam_rows
     ]
@@ -104,6 +138,37 @@ def exams(request: Request, db: Session = Depends(get_db)):
         request,
         "student/exams.html",
         {"page_title": "Available exams", "user": user, "exam_cards": cards},
+    )
+
+
+@router.get("/results")
+def results(request: Request, db: Session = Depends(get_db)):
+    user = student_user(request, db)
+    attempts = list(
+        db.scalars(
+            select(ExamAttempt)
+            .join(Exam)
+            .where(
+                ExamAttempt.student_id == user.id,
+                ExamAttempt.status != AttemptStatus.IN_PROGRESS,
+                Exam.exam_type == ExamType.SCHEDULED,
+            )
+            .order_by(ExamAttempt.submitted_at.desc())
+            .options(selectinload(ExamAttempt.exam))
+        )
+    )
+    result_rows = [
+        {"attempt": attempt, "reveal_answers": can_review_attempt(attempt)}
+        for attempt in attempts
+    ]
+    return render(
+        request,
+        "student/results.html",
+        {
+            "page_title": "Results",
+            "user": user,
+            "result_rows": result_rows,
+        },
     )
 
 

@@ -11,6 +11,18 @@
   </div>
 </section>
 
+<section class="exam-submit-confirm" id="exam-submit-confirm" role="dialog" aria-modal="true" aria-labelledby="exam-submit-confirm-title" aria-describedby="exam-submit-confirm-copy" hidden>
+  <div class="exam-submit-confirm-card">
+    <span class="exam-submit-confirm-icon" aria-hidden="true">✓</span>
+    <h2 id="exam-submit-confirm-title">Submit this exam?</h2>
+    <p id="exam-submit-confirm-copy">You will not be able to change your answers after submission.</p>
+    <div class="exam-submit-confirm-actions">
+      <button class="button button-secondary" id="cancel-exam-submit" type="button">Continue exam</button>
+      <button class="button button-danger" id="confirm-exam-submit" type="button">Submit exam</button>
+    </div>
+  </div>
+</section>
+
 <div class="exam-workspace is-locked" id="exam-workspace" aria-hidden="true">
   <section class="exam-topbar">
     <div><span class="exam-attempt-label">Attempt {{ attempt.attempt_number }}</span><h1>{{ attempt.exam.name }}</h1></div>

@@ -1,26 +1,39 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
 {% block content %}
+<a class="back-link" href="/student/results">← Results</a>
 <section class="result-hero {% if reveal_answers %}result-ready{% else %}result-pending{% endif %}">
-  <div><span class="result-label">Attempt {{ attempt.attempt_number }} completed</span><h1>{{ attempt.exam.name }}</h1><p>Submitted {{ attempt.submitted_at|local_datetime }} · {{ attempt.total_time_seconds|human_seconds }}</p></div>
+  <div><span class="result-label">Exam result</span><h1>{{ attempt.exam.name }}</h1><p>Submitted {{ attempt.submitted_at|local_datetime }} · {{ attempt.total_time_seconds|human_seconds }}</p></div>
   {% if reveal_answers %}<div class="score-orb"><strong>{{ attempt.score|mark }}</strong><span>out of {{ attempt.max_score|mark }}</span></div>
-  {% else %}<div class="pending-lock"><strong>Submitted</strong><span>Answers become available after the scheduled exam ends.</span></div>{% endif %}
+  {% else %}<div class="pending-lock"><strong>Submitted</strong><span>Your score and correct answers become available after the exam ends.</span></div>{% endif %}
 </section>
 
-<div class="metric-grid">
-  {{ ui.metric("Attempted", attempt.attempted_count ~ " / " ~ attempt.exam.total_questions) }}
-  {{ ui.metric("Unanswered", attempt.exam.total_questions - attempt.attempted_count) }}
-  {% if reveal_answers %}{{ ui.metric("Wrong", attempt.wrong_count) }}{% endif %}
-  {{ ui.metric("Monitoring flags", attempt.suspicious_event_count) }}
+<div class="attempt-summary-capsules student-attempt-summary" aria-label="Attempt summary">
+  <span class="summary-chip attempt-attempted">Attempted · {{ attempt.attempted_count }} / {{ attempt.exam.total_questions }}</span>
+  <span class="summary-chip attempt-time">Time · {{ attempt.total_time_seconds|human_seconds }}</span>
+  <span class="summary-chip attempt-duration">Duration · {{ attempt.exam.duration_minutes }} min</span>
+  <span class="summary-chip attempt-questions">Questions · {{ attempt.exam.total_questions }}</span>
+  <span class="summary-chip attempt-marks">Marks · {{ attempt.exam.positive_marks|signed_mark }} / {{ attempt.exam.negative_marks|signed_mark }}</span>
 </div>
 
 <section class="section-block">
-  {{ ui.section_header("Answers", action_href="/student/exams", action_label="Back to exams") }}
-  <div class="review-list">
+  {{ ui.section_header("Answers") }}
+  <div class="review-list instructor-answer-review student-answer-review">
   {% for row in review.rows %}
-    <article class="review-row {% if row.is_correct == true %}review-correct{% elif row.is_correct == false %}review-wrong{% endif %}">
+    <article class="review-row {% if row.is_correct == true %}review-correct{% elif row.is_correct == false %}review-wrong{% else %}review-pending{% endif %}">
       <div class="review-number">{{ row.position }}</div>
-      <div><h3>{{ row.text }}</h3><p><span>Your answer</span>{{ row.selected_label }} · {{ row.selected }}</p>{% if reveal_answers %}<p><span>Correct answer</span>{{ row.correct_label }} · {{ row.correct }}</p>{% else %}<p>{{ row.correct }}</p>{% endif %}</div>
+      <div class="review-content">
+        <h3>{{ row.text }}</h3>
+        <div class="review-options" aria-label="Question {{ row.position }} options">
+        {% for option in row.options %}
+          <div class="review-option {% if option.is_selected and option.is_correct %}option-selected-correct{% elif option.is_selected and reveal_answers %}option-selected-wrong{% elif option.is_selected %}option-selected{% elif option.is_correct %}option-correct{% endif %}">
+            <span class="review-option-label">{{ option.label }}</span>
+            <span class="review-option-text">{{ option.text }}</span>
+            <span class="review-option-tags">{% if option.is_selected %}<span class="option-tag tag-selected">Selected</span>{% endif %}{% if option.is_correct %}<span class="option-tag tag-correct">Correct answer</span>{% endif %}</span>
+          </div>
+        {% endfor %}
+        </div>
+      </div>
       <div class="review-score">{% if row.marks is not none %}{{ row.marks|signed_mark }}{% endif %}<small>{{ row.time|human_seconds }}</small></div>
     </article>
   {% endfor %}

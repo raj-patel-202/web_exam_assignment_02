@@ -1,13 +1,19 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
 {% block content %}
-{{ ui.page_header("Monitoring", "Open an assigned exam to follow student progress and browser events.") }}
-<div class="card-grid card-grid-wide">
-{% for exam in exams %}
-<article class="exam-card">
-  <div class="card-kicker"><span class="type-badge type-{{ exam.exam_type.value }}">{{ exam.exam_type.value }}</span><span>{{ exam.attempts|length }} sessions</span></div>
+{{ ui.page_header("Monitoring") }}
+<div class="examiner-exam-list">
+{% for row in exam_rows %}
+{% set exam = row.exam %}
+<article class="exam-card examiner-exam-card" data-exam-start-at="{{ row.start_at_iso }}" data-exam-end-at="{{ row.end_at_iso }}" data-exam-ended="{{ 'true' if row.status.label == 'Ended' else 'false' }}">
+  <div class="card-kicker"><span class="status-pill {{ row.status.tone }} examiner-card-status">Status · {{ row.status.label }}</span><span>{{ exam.attempts|length }} sessions</span></div>
   <h2>{{ exam.name }}</h2><p>{{ exam.creator.full_name }}</p>
-  <dl class="detail-grid compact-details"><div><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div><div><dt>Duration</dt><dd>{{ exam.duration_minutes }} min</dd></div></dl>
+  <div class="examiner-exam-capsules" aria-label="Exam information">
+    <span class="summary-chip summary-duration">Duration · {{ exam.duration_minutes }} min</span>
+    <span class="summary-chip summary-questions">Questions · {{ exam.total_questions }}</span>
+    <span class="summary-chip summary-start">Starts · {{ exam.start_at|local_datetime }}</span>
+  </div>
+  <strong class="examiner-exam-countdown timer-{{ row.status.label|lower }}" {% if row.status.label == 'Ended' %}hidden{% endif %}>{{ row.time_status }}</strong>
   <a class="button button-full" href="/examiner/exams/{{ exam.id }}/monitor">Open live room</a>
 </article>
 {% else %}<div class="full-span">{{ ui.empty_state("No assigned exams", "An instructor must assign your account before an exam appears here.") }}</div>{% endfor %}

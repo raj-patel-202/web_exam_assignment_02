@@ -21,7 +21,6 @@
     window.clearTimeout(messageTimer);
     window.clearTimeout(messageHideTimer);
     messageModal.classList.remove("is-visible");
-    document.body.classList.remove("has-message-modal");
     messageHideTimer = window.setTimeout(() => { messageModal.hidden = true; }, 180);
   };
 
@@ -39,7 +38,6 @@
     const progressBar = document.createElement("span");
     progressBar.style.animationDuration = `${timeout}ms`;
     messageProgress.replaceChildren(progressBar);
-    document.body.classList.add("has-message-modal");
     window.requestAnimationFrame(() => messageModal.classList.add("is-visible"));
     messageTimer = window.setTimeout(hideMessage, timeout);
   };
@@ -94,20 +92,122 @@
     });
   });
 
-  const examType = document.querySelector("#exam-type");
+  const questionPaperToggle = document.querySelector("#question-paper-toggle");
+  const questionPaperList = document.querySelector("#question-paper-list");
+  questionPaperToggle?.addEventListener("click", () => {
+    const isOpening = questionPaperList.hidden;
+    questionPaperList.hidden = !isOpening;
+    questionPaperToggle.setAttribute("aria-expanded", String(isOpening));
+    questionPaperToggle.textContent = isOpening ? "Hide question paper" : "Show question paper";
+  });
+
+  const examTimeline = document.querySelector(".manage-page-header[data-exam-start-at]");
+  const examTime = document.querySelector("#manage-exam-time");
+  const examStatus = document.querySelector("#manage-exam-status");
+  const compactTime = (milliseconds) => {
+    const totalMinutes = Math.max(1, Math.ceil(milliseconds / 60000));
+    const days = Math.floor(totalMinutes / 1440);
+    const remainingMinutes = totalMinutes % 1440;
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
+    const parts = [];
+    if (days) parts.push(`${days} ${days === 1 ? "day" : "days"}`);
+    if (hours) parts.push(`${hours} hr`);
+    if (minutes || !parts.length) parts.push(`${minutes} min`);
+    return parts.join(" ");
+  };
+  const refreshExamTimeline = () => {
+    if (!examTimeline || !examTime || !examStatus) return;
+    const startAt = new Date(examTimeline.dataset.examStartAt);
+    const endAt = new Date(examTimeline.dataset.examEndAt);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return;
+    const now = new Date();
+    let label = "Published";
+    let tone = "warning";
+    if (examTimeline.dataset.examEnded === "true" || now >= endAt) {
+      label = "Ended";
+      tone = "danger";
+      examTime.hidden = true;
+    } else if (now >= startAt) {
+      label = "Running";
+      tone = "success";
+      examTime.hidden = false;
+      examTime.textContent = `Ends in · ${compactTime(endAt - now)}`;
+    } else {
+      examTime.hidden = false;
+      examTime.textContent = `Starts in · ${compactTime(startAt - now)}`;
+    }
+    examStatus.textContent = `Status · ${label}`;
+    examStatus.classList.remove("success", "warning", "danger", "neutral");
+    examStatus.classList.add(tone);
+    examTime.classList.remove("timer-published", "timer-running", "timer-ended");
+    examTime.classList.add(`timer-${label.toLowerCase()}`);
+  };
+  refreshExamTimeline();
+  if (examTimeline) window.setInterval(refreshExamTimeline, 30000);
+
+  const refreshStudentCountdowns = () => {
+    document.querySelectorAll(".student-start-countdown[data-start-at]").forEach((countdown) => {
+      const startAt = new Date(countdown.dataset.startAt);
+      if (Number.isNaN(startAt.getTime())) return;
+      const remaining = startAt - new Date();
+      if (remaining <= 0) {
+        countdown.hidden = true;
+        return;
+      }
+      countdown.textContent = `Starts in · ${compactTime(remaining)}`;
+    });
+  };
+  refreshStudentCountdowns();
+  if (document.querySelector(".student-start-countdown")) {
+    window.setInterval(refreshStudentCountdowns, 30000);
+  }
+
+  const refreshExaminerCountdowns = () => {
+    document.querySelectorAll(".examiner-exam-card, .examiner-monitor-countdown").forEach((timeline) => {
+      const countdown = timeline.classList.contains("examiner-exam-countdown")
+        ? timeline
+        : timeline.querySelector(".examiner-exam-countdown");
+      const status = timeline.classList.contains("examiner-exam-card")
+        ? timeline.querySelector(".examiner-card-status")
+        : document.querySelector(".monitor-exam-capsules .examiner-card-status");
+      if (!countdown) return;
+      const startAt = new Date(timeline.dataset.examStartAt);
+      const endAt = new Date(timeline.dataset.examEndAt);
+      if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return;
+      const now = new Date();
+      let label = "Published";
+      let tone = "warning";
+      if (timeline.dataset.examEnded === "true" || now >= endAt) {
+        label = "Ended";
+        tone = "danger";
+        countdown.hidden = true;
+      } else if (now >= startAt) {
+        label = "Running";
+        tone = "success";
+        countdown.hidden = false;
+        countdown.textContent = `Ends in · ${compactTime(endAt - now)}`;
+      } else {
+        countdown.hidden = false;
+        countdown.textContent = `Starts in · ${compactTime(startAt - now)}`;
+      }
+      countdown.classList.remove("timer-published", "timer-running", "timer-ended");
+      countdown.classList.add(`timer-${label.toLowerCase()}`);
+      if (status) {
+        status.textContent = `Status · ${label}`;
+        status.classList.remove("success", "warning", "danger", "neutral");
+        status.classList.add(tone);
+      }
+    });
+  };
+  refreshExaminerCountdowns();
+  if (document.querySelector(".examiner-exam-countdown")) {
+    window.setInterval(refreshExaminerCountdowns, 30000);
+  }
+
   const scheduleField = document.querySelector("#schedule-field");
-  const graceField = document.querySelector("#grace-field");
   const startValue = document.querySelector("#start-at-value");
-  const scheduleModeCopy = document.querySelector("#schedule-mode-copy");
   const uploadForm = scheduleField?.closest("form");
-  const monthSelect = document.querySelector("#start-month");
-  const daySelect = document.querySelector("#start-day");
-  const yearSelect = document.querySelector("#start-year");
-  const hourSelect = document.querySelector("#start-hour");
-  const minuteSelect = document.querySelector("#start-minute");
-  const periodSelect = document.querySelector("#start-period");
-  const scheduleControls = [...document.querySelectorAll("[data-schedule-control]")];
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const pageLoadedAt = Date.now();
 
   const localDateFromIso = (value) => {
@@ -118,118 +218,38 @@
   const serverNow = localDateFromIso(scheduleField?.dataset.serverNow) || new Date();
   const liveServerNow = () => new Date(serverNow.getTime() + (Date.now() - pageLoadedAt));
 
-  const replaceOptions = (select, values, labelFor = String) => {
-    if (!select) return;
-    const selected = select.value;
-    select.replaceChildren(...values.map((value) => {
-      const option = document.createElement("option");
-      option.value = String(value);
-      option.textContent = labelFor(value);
-      return option;
-    }));
-    if ([...select.options].some((option) => option.value === selected)) select.value = selected;
-  };
-
-  const refreshDays = () => {
-    if (!daySelect || !monthSelect || !yearSelect) return;
-    const previousDay = Number(daySelect.value || 1);
-    const dayCount = new Date(Number(yearSelect.value), Number(monthSelect.value), 0).getDate();
-    replaceOptions(daySelect, Array.from({ length: dayCount }, (_, index) => index + 1));
-    daySelect.value = String(Math.min(previousDay, dayCount));
-  };
-
-  const setPickerDate = (date) => {
-    if (!monthSelect) return;
-    yearSelect.value = String(date.getFullYear());
-    monthSelect.value = String(date.getMonth() + 1);
-    refreshDays();
-    daySelect.value = String(date.getDate());
-    const hour24 = date.getHours();
-    hourSelect.value = String((hour24 % 12) || 12);
-    minuteSelect.value = String(Math.ceil(date.getMinutes() / 5) * 5 % 60).padStart(2, "0");
-    periodSelect.value = hour24 >= 12 ? "PM" : "AM";
-  };
-
-  const pickerDate = () => {
-    if (!monthSelect) return null;
-    let hour = Number(hourSelect.value);
-    if (periodSelect.value === "AM" && hour === 12) hour = 0;
-    if (periodSelect.value === "PM" && hour !== 12) hour += 12;
-    return new Date(Number(yearSelect.value), Number(monthSelect.value) - 1, Number(daySelect.value), hour, Number(minuteSelect.value));
-  };
-
   const toLocalIso = (date) => {
     const pad = (value) => String(value).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
   const validateSchedule = (announce = false) => {
-    if (!startValue || examType?.value !== "scheduled") return true;
-    const selected = pickerDate();
+    if (!startValue) return true;
+    const selected = localDateFromIso(startValue.value);
     if (!selected || Number.isNaN(selected.getTime()) || selected <= liveServerNow()) {
-      startValue.value = "";
       scheduleField.classList.add("has-error");
       if (announce) window.showMessage("Choose a date and time in the future.", "error");
       return false;
     }
-    startValue.value = toLocalIso(selected);
     scheduleField.classList.remove("has-error");
     return true;
   };
 
-  const initialiseSchedulePicker = () => {
-    if (!monthSelect) return;
-    replaceOptions(monthSelect, Array.from({ length: 12 }, (_, index) => index + 1), (value) => monthNames[value - 1]);
-    replaceOptions(yearSelect, Array.from({ length: 6 }, (_, index) => serverNow.getFullYear() + index));
-    replaceOptions(hourSelect, Array.from({ length: 12 }, (_, index) => index + 1));
-    replaceOptions(minuteSelect, Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, "0")));
-    const initial = localDateFromIso(startValue?.value) || new Date(serverNow.getTime() + 30 * 60 * 1000);
-    initial.setMinutes(Math.ceil(initial.getMinutes() / 5) * 5, 0, 0);
-    setPickerDate(initial);
-    scheduleControls.forEach((control) => control.addEventListener("change", () => {
-      if (control === monthSelect || control === yearSelect) refreshDays();
+  if (startValue) startValue.min = toLocalIso(liveServerNow());
+  startValue?.addEventListener("change", () => validateSchedule());
+  document.querySelectorAll("[data-schedule-offset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = new Date(liveServerNow());
+      selected.setMinutes(selected.getMinutes() + Number(button.dataset.scheduleOffset));
+      selected.setSeconds(0, 0);
+      startValue.value = toLocalIso(selected);
       validateSchedule();
-    }));
-    document.querySelectorAll("[data-schedule-offset]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const choice = button.dataset.scheduleOffset;
-        const selected = new Date(liveServerNow());
-        if (choice === "tomorrow") {
-          selected.setDate(selected.getDate() + 1);
-          selected.setHours(9, 0, 0, 0);
-        } else {
-          selected.setMinutes(selected.getMinutes() + Number(choice));
-          selected.setMinutes(Math.ceil(selected.getMinutes() / 5) * 5, 0, 0);
-        }
-        setPickerDate(selected);
-        validateSchedule();
-      });
     });
-  };
-
-  const syncScheduleFields = () => {
-    if (!examType || !scheduleField || !graceField || !startValue) return;
-    const scheduled = examType.value === "scheduled";
-    scheduleField.classList.toggle("is-disabled", !scheduled);
-    scheduleField.setAttribute("aria-disabled", String(!scheduled));
-    scheduleControls.forEach((control) => { control.disabled = !scheduled; });
-    graceField.querySelector("input").disabled = !scheduled;
-    startValue.disabled = !scheduled;
-    scheduleModeCopy.textContent = scheduled
-      ? `Times are shown in ${scheduleField.dataset.timezone}. Past dates cannot be selected.`
-      : "Scheduling is unavailable for practice exams.";
-    if (scheduled) validateSchedule();
-    else {
-      scheduleField.classList.remove("has-error");
-    }
-  };
-  initialiseSchedulePicker();
-  examType?.addEventListener("change", syncScheduleFields);
+  });
   uploadForm?.addEventListener("submit", (event) => {
-    if (examType?.value === "scheduled" && !validateSchedule(true)) {
+    if (!validateSchedule(true)) {
       event.preventDefault();
       scheduleField.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   });
-  syncScheduleFields();
 })();

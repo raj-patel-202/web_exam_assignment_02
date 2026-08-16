@@ -1,32 +1,47 @@
 {% extends "base.html" %}
-{% import "templates.html" as ui %}
 {% block content %}
-{{ ui.page_header("Hello, " ~ user.full_name.split()[0] ~ ".", "Resume an exam or review your latest results.", "/student/exams", "Find an exam") }}
-
-{% if active_attempts %}
-<section class="section-block">
-  {{ ui.section_header("In progress", active_attempts|length ~ " active attempt" ~ ("s" if active_attempts|length != 1 else "")) }}
-  <div class="card-grid">
-    {% for attempt in active_attempts %}
-    <article class="exam-card active-card">
-      <div class="card-kicker"><span><i class="live-dot"></i> In progress</span><span>Attempt {{ attempt.attempt_number }}</span></div>
-      <h3>{{ attempt.exam.name }}</h3>
-      <p>{% if attempt.activated_at %}Time ends at {{ attempt.expires_at|local_datetime('%I:%M %p') }}{% else %}Ready to start in fullscreen{% endif %}</p>
-      <a class="button button-full" href="/student/attempts/{{ attempt.id }}">Continue exam</a>
-    </article>
-    {% endfor %}
+<section class="welcome-hero student-welcome">
+  <div class="welcome-copy">
+    <span class="welcome-kicker">Student workspace</span>
+    <h1>Welcome, {{ user.full_name.split()[0] }}.</h1>
+    <p>Find your next exam, continue an active attempt, or return to a completed result whenever you need it.</p>
+    <div class="welcome-actions">
+      <a class="button button-large" href="/student/exams">Open exams</a>
+      <a class="button button-secondary button-large" href="/student/results">View results</a>
+    </div>
+  </div>
+  <div class="welcome-visual" aria-hidden="true">
+    <svg viewBox="0 0 560 360" role="img">
+      <defs><linearGradient id="student-card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#e9f4ff"/></linearGradient><linearGradient id="student-blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#35a6ff"/><stop offset="1" stop-color="#0672dc"/></linearGradient></defs>
+      <circle cx="443" cy="74" r="61" fill="#dceeff"/><circle cx="78" cy="286" r="42" fill="#e4f6ef"/>
+      <rect x="72" y="47" width="405" height="259" rx="28" fill="url(#student-card)" stroke="#d7e2ee" stroke-width="2"/>
+      <rect x="96" y="75" width="153" height="16" rx="8" fill="#172437" opacity=".9"/><rect x="96" y="106" width="262" height="9" rx="5" fill="#aab8c9"/>
+      <rect x="96" y="143" width="357" height="48" rx="15" fill="#fff" stroke="#dae4ef"/><circle cx="121" cy="167" r="9" fill="#cbe6ff"/><rect x="145" y="161" width="185" height="11" rx="6" fill="#5c6b7d"/>
+      <rect x="96" y="203" width="357" height="48" rx="15" fill="#fff" stroke="#dae4ef"/><circle cx="121" cy="227" r="9" fill="#cbe6ff"/><rect x="145" y="221" width="220" height="11" rx="6" fill="#5c6b7d"/>
+      <rect x="328" y="270" width="125" height="38" rx="13" fill="url(#student-blue)"/><rect x="355" y="284" width="72" height="9" rx="5" fill="#fff" opacity=".95"/>
+      <path d="M461 139l16 16 31-36" fill="none" stroke="#22a46b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="visual-caption"><strong>{{ available_exam_count }}</strong><span>available exam{% if available_exam_count != 1 %}s{% endif %}</span></div>
   </div>
 </section>
-{% endif %}
 
-<section class="section-block">
-  {{ ui.section_header("Recent results", action_href="/student/exams", action_label="View exams") }}
-  {% if recent_attempts %}
-  <div class="table-wrap"><table><thead><tr><th>Exam</th><th>Submitted</th><th>Score</th><th>Time</th><th></th></tr></thead><tbody>
-  {% for attempt in recent_attempts %}<tr><td><strong>{{ attempt.exam.name }}</strong><small>Attempt {{ attempt.attempt_number }}</small></td><td>{{ attempt.submitted_at|local_datetime }}</td><td>{{ attempt.score|mark }} / {{ attempt.max_score|mark }}</td><td>{{ attempt.total_time_seconds|human_seconds }}</td><td><a href="/student/attempts/{{ attempt.id }}/result">Open</a></td></tr>{% endfor %}
-  </tbody></table></div>
-  {% else %}
-  {{ ui.empty_state("No results yet", "Completed attempts will appear here.", "/student/exams", "Browse exams") }}
-  {% endif %}
+<div class="home-shortcut-grid student-shortcuts">
+  <a class="home-shortcut" href="/student/exams">
+    <div class="shortcut-illustration exam-illustration" aria-hidden="true"><span class="paper-line wide"></span><span class="paper-line"></span><span class="paper-choice selected"></span><span class="paper-choice"></span><span class="paper-choice"></span></div>
+    <div><span class="shortcut-count">{{ active_attempt_count }} active</span><h2>Exams</h2><p>See available papers, schedules, marking rules, and any attempt waiting for you.</p><strong>Go to exams <span>→</span></strong></div>
+  </a>
+  <a class="home-shortcut" href="/student/results">
+    <div class="shortcut-illustration result-illustration" aria-hidden="true"><span class="result-ring"></span><span class="result-bar one"></span><span class="result-bar two"></span><span class="result-bar three"></span></div>
+    <div><span class="shortcut-count">{{ result_count }} completed</span><h2>Results</h2><p>Review scores, time spent, selected answers, and detailed attempt feedback.</p><strong>Open results <span>→</span></strong></div>
+  </a>
+</div>
+
+<section class="feature-story">
+  <div class="feature-story-copy"><span>Built around your attempt</span><h2>Your work stays clear from start to finish.</h2><p>Fullscreen entry, automatic saving, a server-controlled timer, and reconnect support help you focus on answering rather than managing the exam page.</p></div>
+  <div class="feature-points">
+    <article><i>01</i><div><strong>Saved as you answer</strong><p>Your latest response and question position are kept with the attempt.</p></div></article>
+    <article><i>02</i><div><strong>Time kept by the server</strong><p>Reloading the page does not reset or extend your exam timer.</p></div></article>
+    <article><i>03</i><div><strong>Results in one place</strong><p>Every completed attempt is available from the dedicated Results tab.</p></div></article>
+  </div>
 </section>
 {% endblock %}

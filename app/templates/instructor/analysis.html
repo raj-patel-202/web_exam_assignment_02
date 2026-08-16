@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
 {% block content %}
-{{ ui.page_header(exam.name ~ " results", "Scores and question performance from submitted attempts.", back_href="/instructor/exams/" ~ exam.id, back_label="Manage exam") }}
-<div class="metric-grid">
-  {{ ui.metric("Attempts", analysis.total_attempts) }}
-  {{ ui.metric("Average score", (analysis.average_score|mark) ~ " / " ~ (analysis.max_score|mark)) }}
-  {{ ui.metric("Median score", analysis.median_score|mark) }}
-  {{ ui.metric("Average time", analysis.average_time|round|int|human_seconds) }}
+{{ ui.page_header(exam.name ~ " results", "Scores and question performance from submitted attempts.", back_href="/instructor/performance", back_label="Student performance") }}
+<div class="analysis-summary-capsules" aria-label="Performance summary">
+  <span class="summary-chip analysis-students">Students · {{ analysis.student_count }}</span>
+  <span class="summary-chip analysis-average">Average score · {{ analysis.average_score|mark }} / {{ analysis.max_score|mark }}</span>
+  <span class="summary-chip analysis-median">Median score · {{ analysis.median_score|mark }}</span>
+  <span class="summary-chip analysis-time">Average time · {{ analysis.average_time|round|int|human_seconds }}</span>
+  <span class="summary-chip analysis-duration">Duration · {{ exam.duration_minutes }} min</span>
+  <span class="summary-chip analysis-questions">Questions · {{ exam.total_questions }}</span>
+  <span class="summary-chip analysis-marks">Marks · {{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</span>
 </div>
 
 <section class="section-block">

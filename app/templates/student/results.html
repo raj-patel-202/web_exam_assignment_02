@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% import "templates.html" as ui %}
+{% block content %}
+{{ ui.page_header("Results") }}
+
+{% if result_rows %}
+<div class="card-grid card-grid-wide student-result-grid">
+  {% for row in result_rows %}
+  {% set attempt = row.attempt %}
+  <article class="student-result-card">
+    <header class="student-result-header"><h2>{{ attempt.exam.name }}</h2></header>
+    <div class="student-result-dates">
+      <span>Held on · {{ attempt.exam.start_at|local_datetime }}</span>
+      <span>Submitted · {{ attempt.submitted_at|local_datetime }}</span>
+    </div>
+    <div class="student-result-facts">
+      {% if row.reveal_answers %}<div class="result-fact result-score"><span>Score</span><strong>{{ attempt.score|mark }} / {{ attempt.max_score|mark }}</strong></div>
+      {% else %}<div class="result-fact result-score-pending"><span>Score</span><strong>After exam ends</strong></div>{% endif %}
+      <div class="result-fact result-time"><span>Time</span><strong>{{ attempt.total_time_seconds|human_seconds }}</strong></div>
+      <div class="result-fact result-answered"><span>Attempted</span><strong>{{ attempt.attempted_count }} / {{ attempt.exam.total_questions }}</strong></div>
+      <div class="result-fact result-duration"><span>Duration</span><strong>{{ attempt.exam.duration_minutes }} min</strong></div>
+      <div class="result-fact result-questions"><span>Questions</span><strong>{{ attempt.exam.total_questions }}</strong></div>
+      <div class="result-fact result-marks"><span>Marks</span><strong>{{ attempt.exam.positive_marks|signed_mark }} / {{ attempt.exam.negative_marks|signed_mark }}</strong></div>
+    </div>
+    <a class="button button-full" href="/student/attempts/{{ attempt.id }}/result">View result</a>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<section class="section-block">
+  {{ ui.empty_state("No results yet", "Your completed attempts will appear here.", "/student/exams", "Browse exams") }}
+</section>
+{% endif %}
+{% endblock %}

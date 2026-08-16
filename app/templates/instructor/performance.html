@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "templates.html" as ui %}
+{% block content %}
+{{ ui.page_header("Student performance", back_href="/instructor", back_label="Home") }}
+
+<div class="card-grid card-grid-wide">
+{% for row in performance_rows %}
+  {% set exam = row.exam %}
+  <article class="exam-card performance-card">
+    <div class="card-kicker">{{ ui.badge(row.status.label, row.status.tone) }}<span class="exam-fact-pill fact-questions">{{ exam.total_questions }} questions</span></div>
+    <h2>{{ exam.name }}</h2>
+    <dl class="detail-grid performance-facts">
+      <div><dt>Students</dt><dd class="exam-fact-pill fact-students">{{ row.student_count }}</dd></div>
+      <div><dt>Duration</dt><dd class="exam-fact-pill fact-duration">{{ exam.duration_minutes }} min</dd></div>
+      <div><dt>Average score</dt><dd class="exam-fact-pill fact-score">{{ row.average_score|mark }} / {{ row.max_score|mark }}</dd></div>
+      <div><dt>Average time</dt><dd class="exam-fact-pill fact-average-time">{{ row.average_time|round|int|human_seconds }}</dd></div>
+      <div><dt>Marks</dt><dd class="exam-fact-pill fact-marks">{{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</dd></div>
+    </dl>
+    <a class="button button-full" href="/instructor/exams/{{ exam.id }}/analysis">View detailed results</a>
+  </article>
+{% else %}
+  <div class="full-span">{{ ui.empty_state("No exams to review", "Uploaded exams will appear here.", "/instructor/exams/new", "Create exam") }}</div>
+{% endfor %}
+</div>
+{% endblock %}

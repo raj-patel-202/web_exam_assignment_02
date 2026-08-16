@@ -3,16 +3,15 @@
 {% block shell_class %}monitor-shell{% endblock %}
 {% block content %}
 <header class="monitor-header">
-  <div><a class="back-link" href="/examiner">← Monitoring</a><span class="live-label"><i class="live-dot"></i> Live room</span><h1>{{ exam.name }}</h1><p>{{ exam.start_at|local_datetime if exam.start_at else 'Practice exam' }} · {{ exam.duration_minutes }} minutes</p></div>
-  <div class="connection-state" id="monitor-connection"><span></span>Connecting</div>
+  <div><a class="back-link" href="/examiner">← Monitoring rooms</a><h1>{{ exam.name }}</h1><div class="examiner-exam-capsules monitor-exam-capsules"><span class="summary-chip summary-duration">Duration · {{ exam.duration_minutes }} min</span><span class="summary-chip summary-questions">Questions · {{ exam.total_questions }}</span><span class="summary-chip summary-start">Starts · {{ exam.start_at|local_datetime }}</span><span class="status-pill {{ exam_status.tone }} examiner-card-status">Status · {{ exam_status.label }}</span></div></div>
+  <strong class="examiner-exam-countdown timer-{{ exam_status.label|lower }} examiner-monitor-countdown" data-exam-start-at="{{ start_at_iso }}" data-exam-end-at="{{ end_at_iso }}" data-exam-ended="{{ 'true' if exam_status.label == 'Ended' else 'false' }}" {% if exam_status.label == 'Ended' %}hidden{% endif %}>{{ exam_time_status }}</strong>
 </header>
-<div class="metric-grid" id="monitor-metrics"><article class="metric-card"><span>Sessions</span><strong data-metric="total">0</strong></article><article class="metric-card"><span>Online</span><strong data-metric="online">0</strong></article><article class="metric-card"><span>Submitted</span><strong data-metric="submitted">0</strong></article><article class="metric-card"><span>Flags</span><strong data-metric="flags">0</strong></article></div>
+<div class="monitor-summary-capsules" id="monitor-metrics"><span class="summary-chip monitor-sessions">Sessions · <strong data-metric="total">0</strong></span><span class="summary-chip monitor-online">Online · <strong data-metric="online">0</strong></span><span class="summary-chip monitor-submitted">Submitted · <strong data-metric="submitted">0</strong></span><span class="summary-chip monitor-flags">Flags · <strong data-metric="flags">0</strong></span></div>
 <div class="monitor-toolbar"><div class="filter-tabs" id="monitor-filters"><button class="active" data-filter="all">All students</button><button data-filter="flagged">Flagged</button><button data-filter="offline">Disconnected</button><button data-filter="submitted">Submitted</button></div><button class="button button-secondary button-small" id="refresh-monitor" type="button">Refresh</button></div>
 <div class="monitor-grid">
   <section class="section-block monitor-students">{{ ui.section_header("Student activity") }}<span id="student-count-label" hidden>0 sessions</span><div class="table-wrap"><table><thead><tr><th>Student</th><th>Status</th><th>Progress</th><th>Question</th><th>Last signal</th><th>Flags</th></tr></thead><tbody id="monitor-student-body"></tbody></table></div><div class="empty-panel" id="monitor-empty"><span class="empty-icon">○</span><h3>No sessions yet</h3><p>Students appear here when they start the exam.</p></div></section>
   <aside class="section-block event-panel">{{ ui.section_header("Recent events") }}<div class="event-list" id="monitor-events"></div></aside>
 </div>
-<div class="evidence-note"><strong>Use context.</strong> Browser events can support a review, but they do not prove misconduct or show activity on another device.</div>
 <script id="monitor-config" type="application/json">{{ monitor_config|tojson }}</script>
 <script id="monitor-snapshot" type="application/json">{{ initial_snapshot|tojson }}</script>
 {% endblock %}

@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -13,26 +13,22 @@ from app.services.exam_service import create_exam
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import a legacy TXT question paper.")
+    parser = argparse.ArgumentParser(description="Import and schedule a TXT question paper.")
     parser.add_argument("--file", type=Path, required=True)
     parser.add_argument("--name", required=True)
     parser.add_argument("--instructor", required=True, help="Existing instructor username")
-    parser.add_argument("--type", choices=[kind.value for kind in ExamType], default="practice")
     parser.add_argument("--duration", type=int, default=30)
-    parser.add_argument("--start-at", help="YYYY-MM-DD HH:MM for scheduled exams")
+    parser.add_argument("--start-at", required=True, help="Future time in YYYY-MM-DD HH:MM format")
     parser.add_argument("--grace", type=int, default=5)
     args = parser.parse_args()
 
     source_text = args.file.read_text(encoding="utf-8-sig")
     parsed = parse_exam_text(source_text)
-    exam_type = ExamType(args.type)
-    start_at = None
-    if exam_type == ExamType.SCHEDULED:
-        if not args.start_at:
-            raise SystemExit("--start-at is required for a scheduled exam.")
-        start_at = datetime.strptime(args.start_at, "%Y-%m-%d %H:%M").replace(
-            tzinfo=ZoneInfo(get_settings().app_timezone)
-        )
+    start_at = datetime.strptime(args.start_at, "%Y-%m-%d %H:%M").replace(
+        tzinfo=ZoneInfo(get_settings().app_timezone)
+    )
+    if start_at.astimezone(timezone.utc) <= datetime.now(timezone.utc):
+        raise SystemExit("--start-at must be in the future.")
 
     with SessionLocal() as db:
         instructor = db.scalar(
@@ -48,7 +44,7 @@ def main() -> None:
         exam = create_exam(
             db,
             name=args.name,
-            exam_type=exam_type,
+            exam_type=ExamType.SCHEDULED,
             start_at=start_at,
             duration_minutes=args.duration,
             join_grace_minutes=args.grace,
@@ -62,4 +58,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

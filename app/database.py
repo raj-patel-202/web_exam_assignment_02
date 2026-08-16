@@ -23,10 +23,17 @@ class Base(DeclarativeBase):
     pass
 
 
+def initialize_database(session_factory=SessionLocal) -> None:
+    # Import model declarations before creating tables from SQLAlchemy metadata.
+    from app import models  # noqa: F401
+
+    with session_factory() as db:
+        Base.metadata.create_all(bind=db.get_bind(), checkfirst=True)
+
+
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-

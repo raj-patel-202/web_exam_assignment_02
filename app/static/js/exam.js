@@ -19,6 +19,9 @@
   const fullscreenGateCopy = document.querySelector("#fullscreen-gate-copy");
   const workspace = document.querySelector("#exam-workspace");
   const notice = document.querySelector("#exam-notice");
+  const submitConfirmation = document.querySelector("#exam-submit-confirm");
+  const cancelSubmitButton = document.querySelector("#cancel-exam-submit");
+  const confirmSubmitButton = document.querySelector("#confirm-exam-submit");
 
   let current = Math.min(Math.max(config.currentPosition || 0, 0), questions.length - 1);
   let submitted = false;
@@ -27,6 +30,10 @@
   let socket = null;
   let reconnectDelay = 1000;
   let examStarted = Boolean(config.activated && config.expiresAt);
+  let proctoringEnabled = false;
+  let proctoringSuppressed = false;
+  let incidentTimer = null;
+  let pendingIncident = null;
   const eventQueue = [];
 
   const socketUrl = () => {
@@ -96,7 +103,9 @@
       if (!document.fullscreenElement) throw new Error("Fullscreen mode is required to continue.");
       await activateExam();
       unlockExam();
+      proctoringEnabled = true;
     } catch (error) {
+      proctoringEnabled = false;
       lockExam();
       setNotice(error.message || "Fullscreen mode could not be enabled. Allow fullscreen access and try again.", "error");
       if (document.fullscreenElement && !examStarted) {
@@ -228,10 +237,27 @@
     }
   }
 
-  async function submitExam(automatic = false) {
+  const openSubmitConfirmation = () => {
     if (submitted || submitting || !examStarted) return;
-    if (!automatic && !window.confirm("Submit this exam? You will not be able to change your answers afterward.")) return;
+    proctoringSuppressed = true;
+    submitConfirmation.hidden = false;
+    confirmSubmitButton.focus();
+  };
+
+  const closeSubmitConfirmation = () => {
+    submitConfirmation.hidden = true;
+    submitButton.focus();
+    window.setTimeout(() => { proctoringSuppressed = false; }, 400);
+    if (!document.fullscreenElement) lockExam(true);
+  };
+
+  async function submitExam(automatic = false, confirmed = false) {
+    if (submitted || submitting || !examStarted) return;
+    if (!automatic && !confirmed) return openSubmitConfirmation();
+    submitConfirmation.hidden = true;
+    proctoringSuppressed = true;
     submitting = true;
+    proctoringEnabled = false;
     submitButton.disabled = true;
     submitButton.textContent = automatic ? "Time is up — submitting…" : "Submitting…";
     await saveQuestion(current, true);
@@ -248,6 +274,9 @@
     } catch (error) {
       submitted = false;
       submitting = false;
+      proctoringSuppressed = false;
+      proctoringEnabled = Boolean(document.fullscreenElement);
+      if (!proctoringEnabled) lockExam(true);
       submitButton.disabled = false;
       submitButton.textContent = "Submit exam";
       setNotice("Submission could not be confirmed. Check your connection and try again; your saved answers remain on the server.", "error");
@@ -260,8 +289,28 @@
   }
 
   function proctorEvent(eventType, details = {}) {
-    if (submitted || !examStarted) return;
+    if (submitted || submitting || !examStarted || !proctoringEnabled || proctoringSuppressed) return;
     sendSocket({ type: "event", event_type: eventType, occurred_at: new Date().toISOString(), details });
+  }
+
+  const incidentPriority = { window_blur: 1, tab_hidden: 2, fullscreen_exit: 3 };
+  function queueProctorIncident(eventType, details = {}) {
+    if (submitted || submitting || !examStarted || !proctoringEnabled || proctoringSuppressed) return;
+    if (!pendingIncident || incidentPriority[eventType] > incidentPriority[pendingIncident.eventType]) {
+      pendingIncident = { eventType, details };
+    }
+    window.clearTimeout(incidentTimer);
+    incidentTimer = window.setTimeout(() => {
+      const incident = pendingIncident;
+      pendingIncident = null;
+      if (!incident || submitted || submitting || proctoringSuppressed) return;
+      sendSocket({
+        type: "event",
+        event_type: incident.eventType,
+        occurred_at: new Date().toISOString(),
+        details: incident.details,
+      });
+    }, 350);
   }
 
   function connectSocket() {
@@ -298,18 +347,26 @@
 
   previousButton.addEventListener("click", () => navigate(current - 1));
   nextButton.addEventListener("click", () => navigate(current === questions.length - 1 ? 0 : current + 1));
-  submitButton.addEventListener("click", () => submitExam(false));
+  submitButton.addEventListener("click", openSubmitConfirmation);
+  cancelSubmitButton.addEventListener("click", closeSubmitConfirmation);
+  confirmSubmitButton.addEventListener("click", () => submitExam(false, true));
+  submitConfirmation.addEventListener("click", (event) => {
+    if (event.target === submitConfirmation) closeSubmitConfirmation();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !submitConfirmation.hidden) closeSubmitConfirmation();
+  });
   fullscreenGateButton.addEventListener("click", enterFullscreenAndContinue);
 
   document.addEventListener("visibilitychange", () => {
-    proctorEvent(document.hidden ? "tab_hidden" : "tab_visible", { state: document.visibilityState });
+    if (document.hidden) queueProctorIncident("tab_hidden", { state: document.visibilityState });
   });
-  window.addEventListener("blur", () => proctorEvent("window_blur"));
-  window.addEventListener("focus", () => proctorEvent("window_focus"));
+  window.addEventListener("blur", () => queueProctorIncident("window_blur"));
   document.addEventListener("fullscreenchange", () => {
     if (examStarted && !document.fullscreenElement) {
       lockExam(true);
-      proctorEvent("fullscreen_exit");
+      queueProctorIncident("fullscreen_exit");
+      proctoringEnabled = false;
     }
   });
   document.addEventListener("copy", () => proctorEvent("copy_attempt"));
@@ -324,7 +381,7 @@
   });
 
   const navigationEntry = performance.getEntriesByType("navigation")[0];
-  if (navigationEntry?.type === "reload") {
+  if (navigationEntry?.type === "reload" && examStarted) {
     eventQueue.push({ type: "event", event_type: "page_reload", occurred_at: new Date().toISOString(), details: {} });
   }
 

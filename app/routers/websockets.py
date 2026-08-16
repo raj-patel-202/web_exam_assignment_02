@@ -84,11 +84,12 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
             await websocket.close(code=4403)
             return
 
-        await manager.connect_student(attempt.id, websocket)
+        is_reconnect = await manager.connect_student(attempt.id, websocket)
         connected = True
-        reconnect_event = record_event(db, attempt, "reconnected", {"transport": "websocket"})
-        if reconnect_event:
-            await manager.broadcast_exam(attempt.exam_id, event_message(reconnect_event, attempt))
+        if is_reconnect:
+            reconnect_event = record_event(db, attempt, "reconnected", {"transport": "websocket"})
+            if reconnect_event:
+                await manager.broadcast_exam(attempt.exam_id, event_message(reconnect_event, attempt))
         await manager.broadcast_exam(
             attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
         )
@@ -129,16 +130,35 @@ async def student_socket(websocket: WebSocket, attempt_id: int):
         pass
     finally:
         if connected and attempt:
-            await manager.disconnect_student(attempt.id, websocket)
-            db.refresh(attempt)
-            if attempt.status == AttemptStatus.IN_PROGRESS:
-                event = record_event(db, attempt, "disconnected", {"transport": "websocket"})
-                if event:
-                    await manager.broadcast_exam(attempt.exam_id, event_message(event, attempt))
-            await manager.broadcast_exam(
-                attempt.exam_id,
-                {"type": "attempt_update", "attempt": attempt_summary(attempt)},
-            )
+            was_current_connection = await manager.disconnect_student(attempt.id, websocket)
+            if was_current_connection:
+                db.expire_all()
+                current_attempt = db.scalar(
+                    select(ExamAttempt)
+                    .where(ExamAttempt.id == attempt.id)
+                    .options(
+                        selectinload(ExamAttempt.student),
+                        selectinload(ExamAttempt.exam),
+                        selectinload(ExamAttempt.responses),
+                    )
+                )
+                if current_attempt and current_attempt.status == AttemptStatus.IN_PROGRESS:
+                    event = record_event(
+                        db, current_attempt, "disconnected", {"transport": "websocket"}
+                    )
+                    if event:
+                        await manager.broadcast_exam(
+                            current_attempt.exam_id,
+                            event_message(event, current_attempt),
+                        )
+                if current_attempt:
+                    await manager.broadcast_exam(
+                        current_attempt.exam_id,
+                        {
+                            "type": "attempt_update",
+                            "attempt": attempt_summary(current_attempt),
+                        },
+                    )
         db.close()
 
 

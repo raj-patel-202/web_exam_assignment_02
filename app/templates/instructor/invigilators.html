@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "templates.html" as ui %}
+{% block content %}
+{{ ui.page_header("Manage invigilators", back_href="/instructor", back_label="Home") }}
+
+<section class="section-block split-panel">
+  <div><h2>Create an invigilator</h2><p>Access is limited to exams assigned to this account.</p></div>
+  <form class="inline-card-form" action="/instructor/examiners/new" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Full name<input name="full_name" required></label>
+    <label>Username<input name="username" required></label>
+    <label>Temporary password<input type="password" name="password" minlength="8" required></label>
+    <button class="button" type="submit">Create</button>
+  </form>
+</section>
+
+<section class="section-block">
+  {{ ui.section_header("Accounts", "Deleting an account immediately removes its monitoring and invigilation-report access") }}
+  {% if examiners %}<div class="account-list">
+    {% for examiner in examiners %}<article class="account-row"><div class="user-chip"><span>{{ examiner.full_name[:1] }}</span><div><strong>{{ examiner.full_name }}</strong><small>{{ examiner.username }} · {{ examiner.examiner_assignments|length }} assigned exam{% if examiner.examiner_assignments|length != 1 %}s{% endif %}</small></div></div><form action="/instructor/examiners/{{ examiner.id }}/delete" method="post" class="js-confirm-form" data-confirm="Delete {{ examiner.full_name }} permanently? They will immediately lose access to every assigned exam."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-danger button-small" type="submit">Delete account</button></form></article>{% endfor %}
+  </div>{% else %}{{ ui.empty_state("No invigilators", "Create an account when someone needs monitoring access.") }}{% endif %}
+</section>
+{% endblock %}

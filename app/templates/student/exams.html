@@ -5,16 +5,16 @@
 <div class="card-grid card-grid-wide">
 {% for card in exam_cards %}
   {% set exam = card.exam %}
-  <article class="exam-card">
-    <div class="card-kicker"><span class="type-badge type-{{ exam.exam_type.value }}">{{ exam.exam_type.value }}</span><span>{{ exam.total_questions }} questions</span></div>
-    <h2>{{ exam.name }}</h2>
+  <article class="exam-card student-exam-card">
+    <div class="card-kicker card-kicker-title"><h2>{{ exam.name }}</h2><span class="student-question-count">{{ exam.total_questions }} questions</span></div>
     <p>{{ exam.creator.full_name }}</p>
-    <dl class="detail-grid compact-details">
-      <div><dt>Duration</dt><dd>{{ exam.duration_minutes }} min</dd></div>
-      <div><dt>Marks</dt><dd>{{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</dd></div>
-      <div><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div>
-      <div><dt>Attempts</dt><dd>{% if exam.exam_type.value == 'practice' %}Unlimited{% else %}One{% endif %}</dd></div>
+    <dl class="detail-grid compact-details student-exam-facts">
+      <div class="student-fact fact-duration"><dt>Duration</dt><dd>{{ exam.duration_minutes }} min</dd></div>
+      <div class="student-fact fact-marks"><dt>Marks</dt><dd>{{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</dd></div>
+      <div class="student-fact fact-start-time"><dt>Starts</dt><dd>{{ exam.start_at|local_datetime if exam.start_at else 'Any time' }}</dd></div>
+      <div class="student-fact fact-attempts"><dt>Attempts</dt><dd>One</dd></div>
     </dl>
+    {% if card.availability.state == 'upcoming' %}<strong class="student-start-countdown" data-start-at="{{ card.start_at_iso }}">{{ card.start_countdown }}</strong>{% endif %}
     {% if card.availability.state == 'resume' %}<a class="button button-full" href="/student/attempts/{{ card.availability.attempt_id }}">{{ card.availability.label }}</a>
     {% elif card.availability.state == 'available' %}<button class="button button-full js-start-exam" data-exam-id="{{ exam.id }}">{{ card.availability.label }}</button>
     {% else %}<button class="button button-disabled button-full" disabled>{{ card.availability.label }}</button>{% endif %}

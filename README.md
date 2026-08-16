@@ -1,16 +1,18 @@
 # Exam Sentinel
 
-Exam Sentinel is a database-backed web examination system built with FastAPI, PostgreSQL, SQLAlchemy, Alembic, Jinja2, HTML, CSS, vanilla JavaScript, and WebSockets.
+Exam Sentinel is a database-backed web examination system built with FastAPI, PostgreSQL, SQLAlchemy, Jinja2, HTML, CSS, vanilla JavaScript, and WebSockets.
 
 ## Features
 
 - Student, instructor, and examiner/invigilator roles with Argon2 password hashing and signed sessions.
-- Practice exams with unlimited attempts and scheduled exams with a controlled joining window.
+- Scheduled exams with one attempt per student and a controlled joining window.
 - Instructor-configurable decimal positive and negative marks per question.
 - TXT question-paper upload using the existing `Q:`, `A)`–`D)`, `A:` format.
 - Randomized question and option order saved separately for every attempt.
 - Fullscreen-gated exam start, server-authoritative timers, autosave, automatic submission, and reconnect/resume support.
-- Instructor controls to end an exam without interrupting active candidates, manage invigilator assignments, and permanently revoke invigilator accounts.
+- Exams close automatically at their scheduled start time plus joining grace and duration.
+- Instructors can permanently delete an exam and all related questions, assignments, attempts, answers, scores, results, and monitoring events.
+- Instructor controls to manage invigilator assignments and permanently revoke invigilator accounts.
 - Live monitoring of tab visibility, window focus, fullscreen exits, copy/paste, context menus, reloads, connection state, progress, and submissions.
 - Results, question-level timing, difficulty analysis, option distribution, attempt history, and leaderboards.
 
@@ -58,7 +60,7 @@ Choose either Docker or the direct Python setup below. Docker is the easiest opt
 
 4. Open [http://localhost:8000](http://localhost:8000).
 
-The application container waits for PostgreSQL, applies all Alembic migrations, and then starts FastAPI. The first build may take a few minutes.
+The application container waits for PostgreSQL, creates any missing database tables through SQLAlchemy, and then starts FastAPI. The first build may take a few minutes.
 
 To run in the background:
 
@@ -149,29 +151,23 @@ DATABASE_URL=postgresql+psycopg://exam_user:exam_password@localhost:5432/exam_sy
 APP_TIMEZONE=Asia/Kolkata
 ```
 
-### 5. Create or update the database tables
-
-```bash
-python -m alembic upgrade head
-```
-
-### 6. Start FastAPI
+### 5. Start FastAPI
 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-Open [http://localhost:8000](http://localhost:8000). Stop the development server with `Ctrl+C`.
+Open [http://localhost:8000](http://localhost:8000). Missing database tables are created automatically during startup. Stop the development server with `Ctrl+C`.
 
 ## First-time use
 
 1. Open the registration page and create an instructor account.
 2. Sign in as the instructor.
-3. Upload a TXT question paper and choose its type, duration, schedule, and marking scheme.
+3. Upload a TXT question paper and choose its duration, future start time, and marking scheme.
 4. Create an invigilator account from the instructor dashboard and assign it to an exam.
 5. Register a separate student account to take the exam.
 
-Instructors may also create accounts from the command line after applying migrations:
+Instructors may also create accounts from the command line after starting the application once:
 
 ```bash
 python -m scripts.bootstrap_user --username instructor1 --full-name "Lead Instructor" --password "replace-this-password" --role instructor
@@ -184,7 +180,7 @@ Valid roles are `student`, `instructor`, and `examiner`.
 After creating an instructor account, run:
 
 ```bash
-python -m scripts.import_legacy_exam --file sample_data/exam.txt --name "General Knowledge" --instructor instructor1 --type practice --duration 30
+python -m scripts.import_legacy_exam --file sample_data/exam.txt --name "General Knowledge" --instructor instructor1 --duration 30 --start-at "2026-08-14 10:00"
 ```
 
 The importer parses the file and stores normalized questions and options in PostgreSQL.
@@ -226,3 +222,4 @@ docker compose down
 - Back up PostgreSQL regularly.
 - Publish a clear monitoring and privacy policy.
 - For multiple FastAPI processes, add a shared WebSocket fan-out layer such as PostgreSQL `LISTEN/NOTIFY` or Redis.
+- This version creates missing tables automatically and does not include a schema-migration framework. Back up the database and manage schema changes manually before deploying model changes to an existing production database.

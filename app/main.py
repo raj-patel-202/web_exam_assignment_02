@@ -11,10 +11,10 @@ from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
-from app.database import SessionLocal
+from app.database import SessionLocal, initialize_database
 from app.dependencies import current_user_from_request, role_home
 from app.routers import auth, examiner, instructor, student, websockets
-from app.services.exam_service import auto_submit_expired_attempts
+from app.services.exam_service import auto_end_scheduled_exams, auto_submit_expired_attempts
 from app.web import render
 
 
@@ -23,21 +23,23 @@ settings = get_settings()
 
 async def expiry_worker() -> None:
     while True:
-        await asyncio.sleep(10)
         try:
             await asyncio.to_thread(expire_once)
         except Exception:
             # The next cycle retries; request handling remains available.
-            continue
+            pass
+        await asyncio.sleep(10)
 
 
 def expire_once() -> None:
     with SessionLocal() as db:
+        auto_end_scheduled_exams(db)
         auto_submit_expired_attempts(db)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await asyncio.to_thread(initialize_database, SessionLocal)
     worker = asyncio.create_task(expiry_worker())
     yield
     worker.cancel()
@@ -104,4 +106,3 @@ async def http_error(request: Request, exc: HTTPException):
             status_code=404,
         )
     return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-

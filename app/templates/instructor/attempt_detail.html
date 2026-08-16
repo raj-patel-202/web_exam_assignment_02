@@ -2,14 +2,36 @@
 {% import "templates.html" as ui %}
 {% block content %}
 {{ ui.page_header(attempt.student.full_name, exam.name ~ " · submitted " ~ (attempt.submitted_at|local_datetime), back_href="/instructor/exams/" ~ exam.id ~ "/analysis", back_label="Results") }}
-<div class="metric-grid">
-  {{ ui.metric("Score", (attempt.score|mark) ~ " / " ~ (attempt.max_score|mark)) }}
-  {{ ui.metric("Attempted", attempt.attempted_count) }}
-  {{ ui.metric("Wrong", attempt.wrong_count) }}
-  {{ ui.metric("Time", attempt.total_time_seconds|human_seconds) }}
+<div class="attempt-summary-capsules" aria-label="Attempt and question paper information">
+  <span class="summary-chip attempt-score">Score · {{ attempt.score|mark }} / {{ attempt.max_score|mark }}</span>
+  <span class="summary-chip attempt-attempted">Attempted · {{ attempt.attempted_count }}</span>
+  <span class="summary-chip attempt-wrong">Wrong · {{ attempt.wrong_count }}</span>
+  <span class="summary-chip attempt-time">Time · {{ attempt.total_time_seconds|human_seconds }}</span>
+  <span class="summary-chip summary-duration">Duration · {{ exam.duration_minutes }} min</span>
+  <span class="summary-chip summary-questions">Questions · {{ exam.total_questions }}</span>
+  <span class="summary-chip summary-marks">Marks · {{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</span>
 </div>
 <section class="section-block">
   {{ ui.section_header("Answers", attempt.suspicious_event_count ~ " monitoring flag" ~ ("s" if attempt.suspicious_event_count != 1 else "")) }}
-  <div class="review-list">{% for row in review.rows %}<article class="review-row {% if row.is_correct %}review-correct{% else %}review-wrong{% endif %}"><div class="review-number">{{ row.position }}</div><div><h3>{{ row.text }}</h3><p><span>Selected</span>{{ row.selected_label }} · {{ row.selected }}</p><p><span>Correct</span>{{ row.correct_label }} · {{ row.correct }}</p></div><div class="review-score">{{ row.marks|signed_mark }}<small>{{ row.time|human_seconds }}</small></div></article>{% endfor %}</div>
+  <div class="review-list instructor-answer-review">
+  {% for row in review.rows %}
+    <article class="review-row {% if row.is_correct %}review-correct{% else %}review-wrong{% endif %}">
+      <div class="review-number">{{ row.position }}</div>
+      <div class="review-content">
+        <h3>{{ row.text }}</h3>
+        <div class="review-options" aria-label="Question {{ row.position }} options">
+        {% for option in row.options %}
+          <div class="review-option {% if option.is_selected and option.is_correct %}option-selected-correct{% elif option.is_selected %}option-selected-wrong{% elif option.is_correct %}option-correct{% endif %}">
+            <span class="review-option-label">{{ option.label }}</span>
+            <span class="review-option-text">{{ option.text }}</span>
+            <span class="review-option-tags">{% if option.is_selected %}<span class="option-tag tag-selected">Selected</span>{% endif %}{% if option.is_correct %}<span class="option-tag tag-correct">Correct answer</span>{% endif %}</span>
+          </div>
+        {% endfor %}
+        </div>
+      </div>
+      <div class="review-score">{{ row.marks|signed_mark }}<small>{{ row.time|human_seconds }}</small></div>
+    </article>
+  {% endfor %}
+  </div>
 </section>
 {% endblock %}

@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -17,7 +17,6 @@ from app.models import (
     Exam,
     ExamAttempt,
     ExaminerAssignment,
-    ExamStatus,
     ExamType,
     AttemptStatus,
     Question,
@@ -33,7 +32,13 @@ from app.security import (
 )
 from app.services.analytics import attempt_review, exam_analysis
 from app.services.exam_parser import ExamParseError, decode_exam_upload, parse_exam_text
-from app.services.exam_service import create_exam
+from app.services.exam_service import (
+    aware_utc,
+    create_exam,
+    exam_lifecycle_status,
+    exam_time_status,
+    scheduled_finish,
+)
 from app.services.live_monitor import manager
 from app.web import flash, render
 
@@ -69,6 +74,46 @@ def owned_exam(db: Session, exam_id: int, instructor_id: int) -> Exam:
 @router.get("")
 def dashboard(request: Request, db: Session = Depends(get_db)):
     user = instructor_user(request, db)
+    exam_count = int(
+        db.scalar(select(func.count(Exam.id)).where(Exam.created_by_id == user.id))
+        or 0
+    )
+    submitted_attempt_count = int(
+        db.scalar(
+            select(func.count(ExamAttempt.id))
+            .join(Exam)
+            .where(
+                Exam.created_by_id == user.id,
+                ExamAttempt.status != AttemptStatus.IN_PROGRESS,
+            )
+        )
+        or 0
+    )
+    invigilator_count = int(
+        db.scalar(
+            select(func.count(User.id)).where(
+                User.role == UserRole.EXAMINER, User.is_active.is_(True)
+            )
+        )
+        or 0
+    )
+    return render(
+        request,
+        "instructor/dashboard.html",
+        {
+            "page_title": "Instructor dashboard",
+            "user": user,
+            "exam_count": exam_count,
+            "submitted_attempt_count": submitted_attempt_count,
+            "invigilator_count": invigilator_count,
+        },
+    )
+
+
+@router.get("/exams")
+def uploaded_exams(request: Request, db: Session = Depends(get_db)):
+    user = instructor_user(request, db)
+    now = datetime.now(timezone.utc)
     exams = list(
         db.scalars(
             select(Exam)
@@ -77,6 +122,81 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             .options(selectinload(Exam.attempts))
         )
     )
+    exam_rows = [
+        {
+            "exam": exam,
+            "student_count": len({attempt.student_id for attempt in exam.attempts}),
+            "status": exam_lifecycle_status(exam, now),
+            "end_at": scheduled_finish(exam),
+        }
+        for exam in exams
+    ]
+    return render(
+        request,
+        "instructor/exams.html",
+        {
+            "page_title": "Uploaded exams",
+            "user": user,
+            "exam_rows": exam_rows,
+        },
+    )
+
+
+@router.get("/performance")
+def performance(request: Request, db: Session = Depends(get_db)):
+    user = instructor_user(request, db)
+    now = datetime.now(timezone.utc)
+    exams = list(
+        db.scalars(
+            select(Exam)
+            .where(Exam.created_by_id == user.id)
+            .order_by(Exam.created_at.desc())
+            .options(selectinload(Exam.attempts))
+        )
+    )
+    performance_rows = []
+    for exam in exams:
+        submitted = [
+            attempt
+            for attempt in exam.attempts
+            if attempt.status != AttemptStatus.IN_PROGRESS
+        ]
+        average_score = (
+            sum((attempt.score or Decimal("0.00") for attempt in submitted), Decimal("0.00"))
+            / len(submitted)
+            if submitted
+            else Decimal("0.00")
+        )
+        average_time = (
+            sum(attempt.total_time_seconds for attempt in submitted) / len(submitted)
+            if submitted
+            else 0.0
+        )
+        performance_rows.append(
+            {
+                "exam": exam,
+                "student_count": len({attempt.student_id for attempt in submitted}),
+                "average_score": average_score,
+                "average_time": average_time,
+                "max_score": exam.total_questions * exam.positive_marks,
+                "status": exam_lifecycle_status(exam, now),
+                "end_at": scheduled_finish(exam),
+            }
+        )
+    return render(
+        request,
+        "instructor/performance.html",
+        {
+            "page_title": "Student performance",
+            "user": user,
+            "performance_rows": performance_rows,
+        },
+    )
+
+
+@router.get("/invigilators")
+def invigilators(request: Request, db: Session = Depends(get_db)):
+    user = instructor_user(request, db)
     examiners = list(
         db.scalars(
             select(User)
@@ -91,11 +211,10 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     )
     return render(
         request,
-        "instructor/dashboard.html",
+        "instructor/invigilators.html",
         {
-            "page_title": "Instructor dashboard",
+            "page_title": "Invigilators",
             "user": user,
-            "exams": exams,
             "examiners": examiners,
         },
     )
@@ -119,7 +238,6 @@ def new_exam_page(request: Request, db: Session = Depends(get_db)):
 async def new_exam(
     request: Request,
     name: str = Form(...),
-    exam_type: str = Form(...),
     duration_minutes: int = Form(...),
     join_grace_minutes: int = Form(5),
     positive_marks: Decimal = Form(Decimal("4.00")),
@@ -133,7 +251,6 @@ async def new_exam(
     validate_csrf(request, csrf_token)
     form_values = {
         "name": name,
-        "exam_type": exam_type,
         "duration_minutes": duration_minutes,
         "join_grace_minutes": join_grace_minutes,
         "positive_marks": str(positive_marks),
@@ -153,11 +270,7 @@ async def new_exam(
             )
         except InvalidOperation:
             pass
-    try:
-        selected_type = ExamType(exam_type)
-    except ValueError:
-        selected_type = ExamType.PRACTICE
-        error = "Choose a valid exam type."
+    selected_type = ExamType.SCHEDULED
 
     if not name.strip() or len(name.strip()) > 160:
         error = "Exam name is required and must not exceed 160 characters."
@@ -173,7 +286,7 @@ async def new_exam(
         error = "Upload a .txt exam file."
 
     scheduled_start: datetime | None = None
-    if selected_type == ExamType.SCHEDULED and not error:
+    if not error:
         try:
             scheduled_start = datetime.fromisoformat(start_at).replace(
                 tzinfo=ZoneInfo(settings.app_timezone)
@@ -250,6 +363,9 @@ async def new_exam(
 def exam_detail(exam_id: int, request: Request, db: Session = Depends(get_db)):
     user = instructor_user(request, db)
     exam = owned_exam(db, exam_id, user.id)
+    now = datetime.now(timezone.utc)
+    end_at = scheduled_finish(exam)
+    exam_status = exam_lifecycle_status(exam, now)
     examiners = list(
         db.scalars(
             select(User)
@@ -267,6 +383,10 @@ def exam_detail(exam_id: int, request: Request, db: Session = Depends(get_db)):
             "page_title": exam.name,
             "user": user,
             "exam": exam,
+            "exam_status": exam_status,
+            "exam_time_status": exam_time_status(exam, now),
+            "start_at_iso": aware_utc(exam.start_at).isoformat() if exam.start_at else "",
+            "end_at_iso": aware_utc(end_at).isoformat() if end_at else "",
             "examiners": examiners,
             "available_examiners": [
                 examiner
@@ -288,6 +408,9 @@ async def assign_examiner(
     user = instructor_user(request, db)
     validate_csrf(request, csrf_token)
     exam = owned_exam(db, exam_id, user.id)
+    if exam_lifecycle_status(exam, datetime.now(timezone.utc))["label"] == "Ended":
+        flash(request, "New invigilators cannot be assigned after an exam has ended.", "error")
+        return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
     examiner = db.scalar(
         select(User).where(
             User.id == examiner_id,
@@ -380,7 +503,7 @@ async def delete_examiner(
     )
     if examiner is None:
         flash(request, "That invigilator account no longer exists.", "error")
-        return RedirectResponse("/instructor", status_code=303)
+        return RedirectResponse("/instructor/invigilators", status_code=303)
 
     examiner_name = examiner.full_name
     assigned_exam_ids = [assignment.exam_id for assignment in examiner.examiner_assignments]
@@ -400,11 +523,11 @@ async def delete_examiner(
     db.commit()
     await manager.revoke_examiner(examiner_id)
     flash(request, f"{examiner_name}'s invigilator account was deleted.", "success")
-    return RedirectResponse("/instructor", status_code=303)
+    return RedirectResponse("/instructor/invigilators", status_code=303)
 
 
-@router.post("/exams/{exam_id}/end")
-def end_exam(
+@router.post("/exams/{exam_id}/delete")
+async def delete_exam(
     exam_id: int,
     request: Request,
     csrf_token: str = Form(...),
@@ -419,39 +542,26 @@ def end_exam(
     )
     if exam is None:
         raise HTTPException(status_code=404)
-    if exam.status == ExamStatus.ARCHIVED:
-        flash(request, "This exam is already closed to new candidates.", "success")
-        return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
 
-    active_count = int(
-        db.scalar(
-            select(func.count(ExamAttempt.id)).where(
-                ExamAttempt.exam_id == exam.id,
-                ExamAttempt.status == AttemptStatus.IN_PROGRESS,
-            )
-        )
-        or 0
+    attempt_ids = list(
+        db.scalars(select(ExamAttempt.id).where(ExamAttempt.exam_id == exam.id))
     )
-    exam.status = ExamStatus.ARCHIVED
-    db.add(
-        AuditLog(
-            actor_id=user.id,
-            action="end_exam",
-            entity_type="exam",
-            entity_id=exam.id,
-            details={"active_attempts_allowed_to_finish": active_count},
+
+    exam_name = exam.name
+    db.execute(
+        delete(AuditLog).where(
+            AuditLog.entity_type == "exam", AuditLog.entity_id == exam.id
         )
     )
+    db.delete(exam)
     db.commit()
+    await manager.remove_exam(exam_id, attempt_ids)
     flash(
         request,
-        (
-            f"{exam.name} is closed to new candidates. "
-            f"{active_count} active candidate{'s' if active_count != 1 else ''} may finish."
-        ),
+        f"{exam_name} and all of its exam data were permanently deleted.",
         "success",
     )
-    return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
+    return RedirectResponse("/instructor/exams", status_code=303)
 
 
 @router.post("/examiners/new")
@@ -471,7 +581,7 @@ def create_examiner(
         error = "Provide a full name and a username without spaces."
     if error:
         flash(request, error, "error")
-        return RedirectResponse("/instructor", status_code=303)
+        return RedirectResponse("/instructor/invigilators", status_code=303)
     examiner = User(
         full_name=full_name.strip(),
         username=normalized,
@@ -484,9 +594,9 @@ def create_examiner(
     except IntegrityError:
         db.rollback()
         flash(request, "That username is already in use.", "error")
-        return RedirectResponse("/instructor", status_code=303)
+        return RedirectResponse("/instructor/invigilators", status_code=303)
     flash(request, f"Examiner account created for {examiner.full_name}.", "success")
-    return RedirectResponse("/instructor", status_code=303)
+    return RedirectResponse("/instructor/invigilators", status_code=303)
 
 
 @router.get("/exams/{exam_id}/analysis")

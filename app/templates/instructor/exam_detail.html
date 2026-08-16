@@ -1,38 +1,48 @@
 {% extends "base.html" %}
 {% import "templates.html" as ui %}
 {% block content %}
-<header class="page-header">
-  <div class="page-header-copy"><a class="back-link" href="/instructor">← My exams</a><h1>{{ exam.name }}</h1><p>{{ exam.exam_type.value|title }} · created {{ exam.created_at|local_datetime }}</p></div>
-  <div class="page-heading-actions">
-    <a class="button button-secondary" href="/instructor/exams/{{ exam.id }}/analysis">View results</a>
-    {% if exam.status.value != 'archived' %}<form action="/instructor/exams/{{ exam.id }}/end" method="post" class="js-confirm-form" data-confirm="End {{ exam.name }}? New candidates will be blocked, while candidates already taking it may finish."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-danger" type="submit">End exam</button></form>
-    {% else %}{{ ui.badge("Exam ended", "neutral") }}{% endif %}
+<header class="page-header manage-page-header" data-exam-start-at="{{ start_at_iso }}" data-exam-end-at="{{ end_at_iso }}" data-exam-ended="{{ 'true' if exam_status.label == 'Ended' else 'false' }}">
+  <div class="page-header-copy"><a class="back-link" href="/instructor/exams">← Uploaded exams</a><h1>{{ exam.name }}</h1><p>Created {{ exam.created_at|local_datetime }}</p></div>
+  <strong class="manage-exam-timer timer-{{ exam_status.label|lower }}" id="manage-exam-time" {% if exam_status.label == 'Ended' %}hidden{% endif %}>{{ exam_time_status }}</strong>
+  <div class="page-heading-actions manage-heading-actions">
+    <div class="manage-inline-summary" aria-label="Exam information and actions">
+      <span class="summary-chip summary-questions">{{ exam.total_questions }} questions</span>
+      <span class="summary-chip summary-duration">Duration · {{ exam.duration_minutes }} min</span>
+      <span class="summary-chip summary-grace">{{ exam.join_grace_minutes }} min grace</span>
+      <span class="summary-chip summary-start">Starts {{ exam.start_at|local_datetime }}</span>
+      <span class="summary-chip summary-marks">Marks · {{ exam.positive_marks|signed_mark }} / {{ exam.negative_marks|signed_mark }}</span>
+      <span class="status-pill {{ exam_status.tone }}" id="manage-exam-status">Status · {{ exam_status.label }}</span>
+      <form action="/instructor/exams/{{ exam.id }}/delete" method="post" class="js-confirm-form" data-confirm="Permanently delete {{ exam.name }}? This removes its question paper, invigilator assignments, attempts, answers, scores, results, and monitoring events. This cannot be undone."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-danger" type="submit">Delete exam</button></form>
+    </div>
   </div>
 </header>
-{% if exam.status.value == 'archived' %}<div class="evidence-note"><strong>Closed to new candidates.</strong> Anyone already taking the exam can finish normally.</div>{% endif %}
 
-<div class="metric-grid">
-  {{ ui.metric("Questions", exam.total_questions) }}
-  {{ ui.metric("Duration", exam.duration_minutes ~ " min") }}
-  {{ ui.metric("Starts", exam.start_at|local_datetime if exam.start_at else "Any time") }}
-  {{ ui.metric("Marks", (exam.positive_marks|signed_mark) ~ " / " ~ (exam.negative_marks|signed_mark)) }}
+<div class="management-grid">
+  <section class="section-block">
+    {{ ui.section_header("Assigned invigilators") }}
+    {% if exam.examiner_assignments %}<div class="assignment-list">{% for assignment in exam.examiner_assignments %}<div class="assignment-row"><span class="user-chip"><span>{{ assignment.examiner.full_name[:1] }}</span>{{ assignment.examiner.full_name }}</span><form action="/instructor/exams/{{ exam.id }}/unassign-examiner/{{ assignment.examiner.id }}" method="post" class="js-confirm-form" data-confirm="Remove {{ assignment.examiner.full_name }} from this exam? Their open monitoring room will close immediately."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-ghost button-small" type="submit">Remove</button></form></div>{% endfor %}</div>{% else %}<p>No invigilator is assigned.</p>{% endif %}
+  </section>
+  <section class="section-block">
+    {{ ui.section_header("New assignment") }}
+    {% if exam_status.label == 'Ended' %}
+    <div class="assignment-closed"><strong>Exam ended</strong><span>New invigilators can no longer be assigned.</span></div>
+    {% else %}
+    <form class="inline-card-form compact-form" action="/instructor/exams/{{ exam.id }}/assign-examiner" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Invigilator<select name="examiner_id" required><option value="" disabled selected>Select an account</option>{% for examiner in available_examiners %}<option value="{{ examiner.id }}">{{ examiner.full_name }} · {{ examiner.username }}</option>{% endfor %}</select></label>
+      <button class="button" type="submit" {% if not available_examiners %}disabled{% endif %}>Assign</button>
+      {% if not available_examiners %}<small class="assignment-note">No unassigned invigilator accounts are available.</small>{% endif %}
+    </form>
+    {% endif %}
+  </section>
 </div>
 
-<section class="section-block split-panel">
-  <div><h2>Invigilators</h2>
-    {% if exam.examiner_assignments %}<div class="assignment-list">{% for assignment in exam.examiner_assignments %}<div class="assignment-row"><span class="user-chip"><span>{{ assignment.examiner.full_name[:1] }}</span>{{ assignment.examiner.full_name }}</span><form action="/instructor/exams/{{ exam.id }}/unassign-examiner/{{ assignment.examiner.id }}" method="post" class="js-confirm-form" data-confirm="Remove {{ assignment.examiner.full_name }} from this exam? Their open monitoring room will close immediately."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-ghost button-small" type="submit">Remove</button></form></div>{% endfor %}</div>{% else %}<p>No invigilator is assigned.</p>{% endif %}
-  </div>
-  <form class="inline-card-form compact-form" action="/instructor/exams/{{ exam.id }}/assign-examiner" method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label>Assign an invigilator<select name="examiner_id" required><option value="" disabled selected>Select an account</option>{% for examiner in available_examiners %}<option value="{{ examiner.id }}">{{ examiner.full_name }} · {{ examiner.username }}</option>{% endfor %}</select></label>
-    <button class="button" type="submit" {% if not available_examiners %}disabled{% endif %}>Assign</button>
-    {% if not available_examiners %}<small>No unassigned invigilator accounts are available.</small>{% endif %}
-  </form>
-</section>
-
 <section class="section-block">
-  {{ ui.section_header("Question paper", "Correct options are marked below") }}
-  <div class="question-preview-list">
+  <header class="section-header">
+    <div><h2>Question paper</h2></div>
+    <button class="button button-secondary button-small" id="question-paper-toggle" type="button" aria-expanded="false" aria-controls="question-paper-list">Show question paper</button>
+  </header>
+  <div class="question-preview-list" id="question-paper-list" hidden>
   {% for question in exam.questions %}<article><div class="review-number">{{ question.position }}</div><div><h3>{{ question.text }}</h3><ol class="option-preview" type="A">{% for option in question.options %}<li class="{% if option.is_correct %}correct-option{% endif %}">{{ option.text }}{% if option.is_correct %}<span>Correct</span>{% endif %}</li>{% endfor %}</ol></div></article>{% endfor %}
   </div>
 </section>

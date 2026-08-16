@@ -6,7 +6,6 @@
   const body = document.querySelector("#monitor-student-body");
   const eventsContainer = document.querySelector("#monitor-events");
   const empty = document.querySelector("#monitor-empty");
-  const connection = document.querySelector("#monitor-connection");
   const countLabel = document.querySelector("#student-count-label");
   const filters = document.querySelector("#monitor-filters");
   let activeFilter = "all";
@@ -149,8 +148,6 @@
     socket = new WebSocket(socketUrl());
     socket.addEventListener("open", () => {
       reconnectDelay = 1000;
-      connection.className = "connection-state connected";
-      connection.lastChild.textContent = "Connected";
     });
     socket.addEventListener("message", (message) => {
       const payload = JSON.parse(message.data);
@@ -167,12 +164,8 @@
       if (event.code === 4403) {
         state = { attempts: [], events: [] };
         render();
-        connection.className = "connection-state disconnected";
-        connection.lastChild.textContent = "Access revoked";
         return;
       }
-      connection.className = "connection-state disconnected";
-      connection.lastChild.textContent = "Reconnecting";
       window.setTimeout(connect, reconnectDelay);
       reconnectDelay = Math.min(reconnectDelay * 2, 15000);
     });

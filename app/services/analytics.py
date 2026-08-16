@@ -108,6 +108,7 @@ def exam_analysis(db: Session, exam: Exam) -> dict[str, object]:
     ]
     return {
         "total_attempts": total_attempts,
+        "student_count": len({attempt.student_id for attempt in attempts}),
         "average_score": (
             sum(scores, Decimal("0.00")) / total_attempts
             if total_attempts
@@ -128,16 +129,43 @@ def attempt_review(attempt: ExamAttempt, reveal_answers: bool) -> dict[str, obje
     for display_position, question_id in enumerate(attempt.question_order, start=1):
         question = question_map[int(question_id)]
         response = response_map[question.id]
-        selected = response.selected_option
+        option_map = {option.id: option for option in question.options}
+        ordered_option_ids = attempt.option_orders.get(str(question.id)) or [
+            option.id for option in question.options
+        ]
+        display_options = []
+        selected_label = "—"
+        correct_label = "—"
+        selected_text = "Not answered"
+        correct_text = "Available after the exam ends"
+        for option_index, option_id in enumerate(ordered_option_ids):
+            option = option_map[int(option_id)]
+            display_label = chr(ord("A") + option_index)
+            is_selected = response.selected_option_id == option.id
+            if is_selected:
+                selected_label = display_label
+                selected_text = option.text
+            if option.is_correct and reveal_answers:
+                correct_label = display_label
+                correct_text = option.text
+            display_options.append(
+                {
+                    "label": display_label,
+                    "text": option.text,
+                    "is_selected": is_selected,
+                    "is_correct": option.is_correct if reveal_answers else False,
+                }
+            )
         correct = next(option for option in question.options if option.is_correct)
         rows.append(
             {
                 "position": display_position,
                 "text": question.text,
-                "selected": selected.text if selected else "Not answered",
-                "selected_label": selected.label if selected else "—",
-                "correct": correct.text if reveal_answers else "Available after the exam ends",
-                "correct_label": correct.label if reveal_answers else "—",
+                "selected": selected_text,
+                "selected_label": selected_label,
+                "correct": correct_text,
+                "correct_label": correct_label,
+                "options": display_options,
                 "marks": response.marks_awarded if reveal_answers else None,
                 "time": response.time_spent_seconds,
                 "is_correct": (
