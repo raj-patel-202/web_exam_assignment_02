@@ -12,6 +12,7 @@
   const timer = document.querySelector("#exam-timer strong");
   const previousButton = document.querySelector("#previous-question");
   const nextButton = document.querySelector("#next-question");
+
   const submitButton = document.querySelector("#submit-exam");
   const fullscreenGate = document.querySelector("#fullscreen-gate");
   const fullscreenGateButton = document.querySelector("#fullscreen-gate-button");
@@ -130,16 +131,12 @@
   function renderQuestion() {
     const question = questions[current];
     card.replaceChildren();
-    const heading = create("div", "question-heading");
-    heading.append(create("span", "question-label", `Question ${current + 1}`));
-    const clear = create("button", "button button-secondary clear-answer", "Clear answer");
-    clear.style.marginLeft = "15px";
-    clear.type = "button";
-    clear.disabled = question.selected_option_id === null;
-    clear.addEventListener("click", () => selectAnswer(null));
-    heading.append(clear);
-    card.append(heading);
 
+    /* ── Question label ── */
+    const label = create("div", "question-number-label", `Question ${current + 1}`);
+    card.append(label);
+
+    /* ── Question text ── */
     const title = create("h2", "question-text");
     question.text.split("\n").forEach((line, index) => {
       if (index) title.append(document.createElement("br"));
@@ -147,6 +144,7 @@
     });
     card.append(title);
 
+    /* ── Options ── */
     const optionList = create("div", "option-list");
     question.options.forEach((option) => {
       const label = create("label", "option-choice");
@@ -162,9 +160,11 @@
     });
     card.append(optionList);
 
+    /* ── Update counter, navigation & clear button ── */
     counter.textContent = `Question ${current + 1} of ${questions.length}`;
     previousButton.disabled = current === 0;
-    nextButton.textContent = current === questions.length - 1 ? "Review first question" : "Next question";
+    nextButton.textContent = current === questions.length - 1 ? "Review first question →" : "Next question →";
+
     renderPalette();
   }
 
@@ -182,6 +182,12 @@
     const answered = questions.filter((question) => question.selected_option_id !== null).length;
     answeredCount.textContent = String(answered);
     unansweredCount.textContent = String(questions.length - answered);
+  }
+
+  function clearAnswer() {
+    questions[current].selected_option_id = null;
+    renderQuestion();
+    scheduleSave(current, 120);
   }
 
   function selectAnswer(optionId) {
@@ -348,6 +354,7 @@
 
   previousButton.addEventListener("click", () => navigate(current - 1));
   nextButton.addEventListener("click", () => navigate(current === questions.length - 1 ? 0 : current + 1));
+
   submitButton.addEventListener("click", openSubmitConfirmation);
   cancelSubmitButton.addEventListener("click", closeSubmitConfirmation);
   confirmSubmitButton.addEventListener("click", () => submitExam(false, true));

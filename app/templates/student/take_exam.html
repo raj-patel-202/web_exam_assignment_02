@@ -31,22 +31,25 @@
 
 <div class="exam-workspace is-locked" id="exam-workspace" aria-hidden="true">
   <section class="exam-topbar">
-    <div><span class="exam-attempt-label">Attempt {{ attempt.attempt_number }}</span><h1>{{ attempt.exam.name }}</h1></div>
+    <div class="exam-topbar-left">
+      <h1>{{ attempt.exam.name }}</h1>
+      <div class="exam-topbar-meta">
+        <span class="exam-progress-pill" id="save-status">All changes saved</span>
+      </div>
+    </div>
     <div class="exam-top-actions">
       <div class="timer" id="exam-timer" aria-live="polite"><small>Time remaining</small><strong>--:--</strong></div>
     </div>
   </section>
-  <div class="exam-notice" id="exam-notice" role="status">Answers save automatically. Browser focus changes are recorded for examiner review.</div>
 
   <div class="exam-layout">
     <section class="question-stage doodle-card" aria-live="polite" style="position: relative;">
       <svg class="card-doodle" viewBox="0 0 800 600" preserveAspectRatio="none" aria-hidden="true" style="pointer-events: none;"><circle cx="700" cy="100" r="30" fill="rgba(72,165,255,.06)"/><rect x="50" y="500" width="40" height="40" rx="8" fill="rgba(34,164,107,.06)" transform="rotate(20 70 520)"/><path d="M 700 500 c 20 -20 40 20 60 0" fill="none" stroke="rgba(101,70,154,.1)" stroke-width="3" stroke-linecap="round"/></svg>
       <div style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column;">
-        <div class="question-meta"><span id="question-counter">Question 1 of {{ questions|length }}</span><span id="save-status">All changes saved</span></div>
       <article id="question-card" class="question-card"></article>
       <div class="question-actions">
-        <button class="button button-secondary" id="previous-question" type="button">Previous</button>
-        <button class="button" id="next-question" type="button">Next question</button>
+        <button class="button button-secondary" id="previous-question" type="button">← Previous</button>
+        <button class="button" id="next-question" type="button">Next question →</button>
         </div>
       </div>
     </section>
@@ -61,6 +64,9 @@
     </aside>
   </div>
 </div>
+<!-- hidden counter element for JS -->
+<span id="question-counter" hidden>Question 1 of {{ questions|length }}</span>
+<div id="exam-notice" hidden></div>
 <script id="questions-data" type="application/json">{{ questions|tojson }}</script>
 <script id="exam-config" type="application/json">{{ exam_config|tojson }}</script>
 {% endblock %}

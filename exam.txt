@@ -1,0 +1,69 @@
+Q: Which data structure is best suited to optimize the Two Sum problem from O(n^2) to O(n) time complexity?
+A) Stack
+B) Queue
+C) Hash Map
+D) Linked List
+A: C
+
+Q: Which data structure is typically used to solve the Valid Parentheses problem?
+A) Hash Map
+B) Stack
+C) Queue
+D) Heap
+A: B
+
+Q: What is the optimal time complexity to merge two sorted linked lists of lengths m and n?
+A) O(m * n)
+B) O(log(m + n))
+C) O(m + n)
+D) O(1)
+A: C
+
+Q: Which algorithm is commonly used to find the contiguous subarray with the largest sum in O(n) time?
+A) Kadane's Algorithm
+B) Dijkstra's Algorithm
+C) Floyd-Warshall Algorithm
+D) Kruskal's Algorithm
+A: A
+
+Q: If an array represents stock prices on consecutive days, what is the core logic to maximize profit in a single transaction?
+A) Find the absolute maximum and absolute minimum in the array
+B) Track the minimum price seen so far and calculate current profit at each step
+C) Sort the array in ascending order
+D) Reverse the array
+A: B
+
+Q: When reversing a singly linked list iteratively, how many pointers are typically required to keep track of the nodes?
+A) 1
+B) 2
+C) 3
+D) 4
+A: C
+
+Q: What is the time complexity of Binary Search on a sorted array of n elements?
+A) O(1)
+B) O(log n)
+C) O(n)
+D) O(n log n)
+A: B
+
+Q: Which of the following approaches is most efficient to check if two strings are valid anagrams?
+A) Generate all permutations of the first string and compare
+B) Sort both strings and compare if they are identical
+C) Count the frequency of each character in both strings and compare the counts
+D) Compare the lengths of the strings only
+A: C
+
+Q: Which traversal method can be used to invert a binary tree?
+A) In-order traversal
+B) Level-order traversal
+C) Pre-order traversal
+D) All of the above
+A: D
+
+Q: What is the average time complexity of checking for duplicates in an array using a Hash Set?
+A) O(1)
+B) O(log n)
+C) O(n)
+D) O(n^2)
+A: C
