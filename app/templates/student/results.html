@@ -13,6 +13,7 @@
     <div class="student-result-dates">
       <span>Held on · {{ attempt.exam.start_at|local_datetime }}</span>
       <span>Submitted · {{ attempt.submitted_at|local_datetime }}</span>
+      <span>By · {{ attempt.exam.creator.full_name }}</span>
     </div>
     <div class="analysis-stats-grid" style="margin-bottom: 20px;">
       {% if row.reveal_answers %}

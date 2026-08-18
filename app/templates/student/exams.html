@@ -8,7 +8,7 @@
   <article class="exam-card student-exam-card doodle-card">
     <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="105" cy="10" r="10" fill="rgba(72,165,255,.12)"/><circle cx="10" cy="32" r="6" fill="rgba(34,164,107,.09)"/><path d="M 50 5 l 8 10 -4 6" fill="none" stroke="rgba(245,166,35,.22)" stroke-width="1.2" stroke-linecap="round"/><rect x="80" y="25" width="8" height="8" rx="2" fill="none" stroke="rgba(101,70,154,.15)" stroke-width="1.1" transform="rotate(15 84 29)"/></svg>
     <div class="card-kicker card-kicker-title"><h2>{{ exam.name }}</h2><span class="student-question-count">{{ exam.total_questions }} questions</span></div>
-    <p>{{ exam.creator.full_name }}</p>
+    <p>Conducted by {{ exam.creator.full_name }}</p>
     {% if card.availability.state == 'upcoming' %}<strong class="student-start-countdown" data-start-at="{{ card.start_at_iso }}">{{ card.start_countdown }}</strong>{% endif %}
     <div class="analysis-stats-grid" style="margin-top: 10px; margin-bottom: 16px; grid-template-columns: repeat(2, minmax(0, 1fr));">
       <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
@@ -18,7 +18,7 @@
       </div>
       <div class="stat-card doodle-card" style="padding: 12px; min-height: 0;">
         <svg class="card-doodle-sm" viewBox="0 0 120 40" aria-hidden="true"><circle cx="108" cy="8" r="9" fill="rgba(101,70,154,.09)"/><rect x="8" y="28" width="12" height="8" rx="3" fill="none" stroke="rgba(72,165,255,.15)" stroke-width="1.1" transform="rotate(-10 14 32)"/><path d="M 40 10 c 5 -5 10 5 15 0" fill="none" stroke="rgba(34,164,107,.2)" stroke-width="1.2" stroke-linecap="round"/><circle cx="80" cy="35" r="4" fill="rgba(245,166,35,.12)"/></svg>
-        <span class="stat-label">Marks</span>
+        <span class="stat-label">Marks/Q</span>
         <strong class="stat-value" style="font-size: 1.05rem;">{{ exam.positive_marks|signed_mark }}</strong>
       </div>
     </div>

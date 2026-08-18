@@ -198,7 +198,7 @@ def take_exam(attempt_id: int, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/attempts/{attempt_id}/activate")
-def activate(
+async def activate(
     attempt_id: int,
     request: Request,
     x_csrf_token: str | None = Header(default=None),
@@ -213,7 +213,7 @@ def activate(
         attempt = activate_attempt(db, attempt)
     except AttemptRuleError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
-    manager.broadcast_exam(
+    await manager.broadcast_exam(
         attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
     )
     return {
@@ -224,7 +224,7 @@ def activate(
 
 
 @router.post("/attempts/{attempt_id}/save")
-def autosave(
+async def autosave(
     attempt_id: int,
     payload: SaveResponsePayload,
     request: Request,
@@ -240,14 +240,14 @@ def autosave(
         save_response(db, attempt, **payload.model_dump())
     except AttemptRuleError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
-    manager.broadcast_exam(
+    await manager.broadcast_exam(
         attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
     )
     return {"ok": True, "saved_at": datetime.now(timezone.utc).isoformat()}
 
 
 @router.post("/attempts/{attempt_id}/submit")
-def submit(
+async def submit(
     attempt_id: int,
     request: Request,
     x_csrf_token: str | None = Header(default=None),
@@ -262,7 +262,7 @@ def submit(
         submit_attempt(db, attempt)
     except AttemptRuleError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
-    manager.broadcast_exam(
+    await manager.broadcast_exam(
         attempt.exam_id, {"type": "attempt_update", "attempt": attempt_summary(attempt)}
     )
     return {"ok": True, "redirect_url": f"/student/attempts/{attempt.id}/result"}

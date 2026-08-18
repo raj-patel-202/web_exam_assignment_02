@@ -11,6 +11,7 @@
   const unansweredCount = document.querySelector("#unanswered-count");
   const timer = document.querySelector("#exam-timer strong");
   const previousButton = document.querySelector("#previous-question");
+  const clearButton = document.querySelector("#clear-answer");
   const nextButton = document.querySelector("#next-question");
 
   const submitButton = document.querySelector("#submit-exam");
@@ -33,8 +34,6 @@
   let examStarted = Boolean(config.activated && config.expiresAt);
   let proctoringEnabled = false;
   let proctoringSuppressed = false;
-  let incidentTimer = null;
-  let pendingIncident = null;
   const eventQueue = [];
 
   const socketUrl = () => {
@@ -163,6 +162,7 @@
     /* ── Update counter, navigation & clear button ── */
     counter.textContent = `Question ${current + 1} of ${questions.length}`;
     previousButton.disabled = current === 0;
+    clearButton.hidden = question.selected_option_id === null;
     nextButton.textContent = current === questions.length - 1 ? "Review first question →" : "Next question →";
 
     renderPalette();
@@ -296,28 +296,9 @@
   }
 
   function proctorEvent(eventType, details = {}) {
-    if (submitted || submitting || !examStarted || !proctoringEnabled || proctoringSuppressed) return;
+    if (submitted || submitting || !examStarted || proctoringSuppressed) return;
+    if (!proctoringEnabled && eventType !== "tab_visible" && eventType !== "window_focus") return;
     sendSocket({ type: "event", event_type: eventType, occurred_at: new Date().toISOString(), details });
-  }
-
-  const incidentPriority = { window_blur: 1, tab_hidden: 2, fullscreen_exit: 3 };
-  function queueProctorIncident(eventType, details = {}) {
-    if (submitted || submitting || !examStarted || !proctoringEnabled || proctoringSuppressed) return;
-    if (!pendingIncident || incidentPriority[eventType] > incidentPriority[pendingIncident.eventType]) {
-      pendingIncident = { eventType, details };
-    }
-    window.clearTimeout(incidentTimer);
-    incidentTimer = window.setTimeout(() => {
-      const incident = pendingIncident;
-      pendingIncident = null;
-      if (!incident || submitted || submitting || proctoringSuppressed) return;
-      sendSocket({
-        type: "event",
-        event_type: incident.eventType,
-        occurred_at: new Date().toISOString(),
-        details: incident.details,
-      });
-    }, 350);
   }
 
   function connectSocket() {
@@ -353,6 +334,7 @@
   }
 
   previousButton.addEventListener("click", () => navigate(current - 1));
+  clearButton.addEventListener("click", clearAnswer);
   nextButton.addEventListener("click", () => navigate(current === questions.length - 1 ? 0 : current + 1));
 
   submitButton.addEventListener("click", openSubmitConfirmation);
@@ -366,14 +348,35 @@
   });
   fullscreenGateButton.addEventListener("click", enterFullscreenAndContinue);
 
+  let isBlurred = false;
+  let isHidden = document.hidden;
+
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) queueProctorIncident("tab_hidden", { state: document.visibilityState });
+    if (document.hidden === isHidden) return;
+    isHidden = document.hidden;
+    if (isHidden) {
+      proctorEvent("tab_hidden", { state: document.visibilityState });
+    } else {
+      proctorEvent("tab_visible", { state: document.visibilityState });
+    }
   });
-  window.addEventListener("blur", () => queueProctorIncident("window_blur"));
+
+  window.addEventListener("blur", () => {
+    if (isBlurred) return;
+    isBlurred = true;
+    proctorEvent("window_blur");
+  });
+
+  window.addEventListener("focus", () => {
+    if (!isBlurred) return;
+    isBlurred = false;
+    proctorEvent("window_focus");
+  });
+
   document.addEventListener("fullscreenchange", () => {
     if (examStarted && !document.fullscreenElement) {
       lockExam(true);
-      queueProctorIncident("fullscreen_exit");
+      proctorEvent("fullscreen_exit");
       proctoringEnabled = false;
     }
   });

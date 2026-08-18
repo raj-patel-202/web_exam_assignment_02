@@ -66,4 +66,4 @@ A) O(1)
 B) O(log n)
 C) O(n)
 D) O(n^2)
-A: C
+A: A

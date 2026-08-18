@@ -356,7 +356,7 @@ def attempt_detail(
 
 
 @router.post("/exams/{exam_id}/delete")
-def delete_exam(
+async def delete_exam(
     exam_id: int,
     request: Request,
     csrf_token: str = Form(...),
@@ -379,7 +379,7 @@ def delete_exam(
     exam_name = exam.name
     db.delete(exam)
     db.commit()
-    manager.remove_exam(exam_id, attempt_ids)
+    await manager.remove_exam(exam_id, attempt_ids)
     flash(
         request,
         f"{exam_name} and all of its exam data were permanently deleted.",
@@ -502,7 +502,7 @@ def create_examiner(
 
 
 @router.post("/examiners/{examiner_id}/delete")
-def delete_examiner(
+async def delete_examiner(
     examiner_id: int,
     request: Request,
     csrf_token: str = Form(...),
@@ -522,7 +522,7 @@ def delete_examiner(
     examiner_name = examiner.full_name
     db.delete(examiner)
     db.commit()
-    manager.revoke_examiner(examiner_id)
+    await manager.revoke_examiner(examiner_id)
     flash(request, f"{examiner_name}'s invigilator account was deleted.", "success")
     return RedirectResponse("/instructor/invigilators", status_code=303)
 
@@ -569,7 +569,7 @@ def assign_examiner(
 
 
 @router.post("/exams/{exam_id}/unassign-examiner/{examiner_id}")
-def unassign_examiner(
+async def unassign_examiner(
     exam_id: int,
     examiner_id: int,
     request: Request,
@@ -594,6 +594,6 @@ def unassign_examiner(
     examiner_name = assignment.examiner.full_name
     db.delete(assignment)
     db.commit()
-    manager.revoke_examiner(examiner_id, exam.id)
+    await manager.revoke_examiner(examiner_id, exam.id)
     flash(request, f"{examiner_name} can no longer monitor {exam.name}.", "success")
     return RedirectResponse(f"/instructor/exams/{exam.id}", status_code=303)
